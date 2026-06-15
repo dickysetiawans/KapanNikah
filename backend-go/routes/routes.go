@@ -50,5 +50,8 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/admin", limiterMiddleware, controllers.CreateAdmin)
 		protected.GET("/admin/:id", controllers.GetAdminByID)
 		protected.PUT("/admin/:id",limiterMiddleware, controllers.UpdateAdmin)
+
+
+		protected.GET("/paket", controllers.GetPaket)
 	}
 }
