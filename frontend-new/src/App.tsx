@@ -158,6 +158,12 @@ export default function App() {
                 </RoleRoute>
               }
             />
+             <Route path="/paket/tambah" element={
+                <RoleRoute roles={[1]}>
+                  <AddPaket />
+                </RoleRoute>
+              }
+            />
             {/* Admin */}
            {/* <Route path="/admin" element={
                 <RoleRoute roles={[1]}>
