@@ -90,7 +90,8 @@ import RoleRoute from "./routes/RoleRoute";
 import AddCustomer from "./pages/Customer/AddCustomer";
 import EditCustomer from "./pages/Customer/EditCustomer";
 import ViewCustomer from "./pages/Customer/ViewCustomer";
-
+import Paket from "./pages/Paket/Paket";
+import AddPaket from "./pages/Paket/AddPaket";
 export default function App() {
   return (
     <Router>
@@ -147,6 +148,13 @@ export default function App() {
             <Route path="/pelanggan/view/:id" element={
                 <RoleRoute roles={[1]}>
                   <ViewCustomer />
+                </RoleRoute>
+              }
+            />
+
+            <Route path="/paket/" element={
+                <RoleRoute roles={[1]}>
+                  <Paket />
                 </RoleRoute>
               }
             />
