@@ -11,7 +11,7 @@ import {
 
 // 1. Tambahkan properti phone ke interface agar tidak dianggap error oleh TypeScript
 interface Customer {
-  id: number;
+  ID: number;
   name: string;
   email: string;
   role_id: number;
@@ -163,7 +163,7 @@ export default function CustomerTable() {
 
               <TableBody>
                 {currentItems.map((customer) => (
-                  <TableRow key={customer.ID}>
+                  <TableRow key={customer.id}>
                     <TableCell className="px-4 py-3 text-gray-600 text-start text-theme-sm">
                       {customer.name}
                     </TableCell>
@@ -179,7 +179,7 @@ export default function CustomerTable() {
                       <div className="flex items-center justify-center gap-2">
                         {/* Tombol View */}
                         <button
-                          onClick={() => handleView(customer.ID)}
+                          onClick={() => handleView(customer.id)}
                           className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition"
                         >
                           Detail
@@ -187,7 +187,7 @@ export default function CustomerTable() {
 
                         {/* Tombol Edit */}
                         <button
-                          onClick={() => handleEdit(customer.ID)}
+                          onClick={() => handleEdit(customer.id)}
                           className="px-2.5 py-1 text-xs font-medium text-amber-600 bg-amber-50 rounded-md hover:bg-amber-100 transition"
                         >
                           Ubah
@@ -195,13 +195,13 @@ export default function CustomerTable() {
 
                         {/* Tombol Delete */}
                         <button
-                          onClick={() => handleDelete(customer.ID)}
+                          onClick={() => handleDelete(customer.id)}
                           className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition"
                         >
                           Hapus
                         </button>
                        {/* <button
-                          onClick={() => handleSendPasswordToEmail(customer.ID)}
+                          onClick={() => handleSendPasswordToEmail(customer.id)}
                           className="px-2.5 py-1 text-xs font-medium text-green-600 bg-red-50 rounded-md hover:bg-green-100 transition"
                         >
                           Kirim Password

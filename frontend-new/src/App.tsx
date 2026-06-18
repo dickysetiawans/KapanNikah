@@ -92,6 +92,8 @@ import EditCustomer from "./pages/Customer/EditCustomer";
 import ViewCustomer from "./pages/Customer/ViewCustomer";
 import Paket from "./pages/Paket/Paket";
 import AddPaket from "./pages/Paket/AddPaket";
+import EditPaket from "./pages/Paket/EditPaket";
+import ViewPaket from "./pages/Paket/ViewPaket";
 export default function App() {
   return (
     <Router>
@@ -161,6 +163,18 @@ export default function App() {
              <Route path="/paket/tambah" element={
                 <RoleRoute roles={[1]}>
                   <AddPaket />
+                </RoleRoute>
+              }
+            />
+            <Route path="/paket/edit/:id" element={
+                <RoleRoute roles={[1]}>
+                  <EditPaket />
+                </RoleRoute>
+              }
+            />
+            <Route path="/paket/view/:id" element={
+                <RoleRoute roles={[1]}>
+                  <ViewPaket />
                 </RoleRoute>
               }
             />

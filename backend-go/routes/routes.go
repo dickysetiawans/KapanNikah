@@ -12,15 +12,22 @@ import (
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
-func SetupRoutes(r *gin.Engine) {
-	// 1. Setup CORS (Biar React bisa akses)
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:5173"},
-		AllowMethods: []string{"POST", "GET", "OPTIONS", "PUT"},
-		AllowHeaders: []string{"Content-Type", "Authorization"},
-	}))
 
-	// 2. Setup Rate Limiter (Contoh: Maksimal 5 request per menit berdasarkan IP)
+func SetupRoutes(r *gin.Engine) {
+	
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent) // Status 204
+			return
+		}
+
+		c.Next()
+	})
 	rate := limiter.Rate{
 		Period: 1 * time.Minute,
 		Limit:  5,
@@ -30,28 +37,34 @@ func SetupRoutes(r *gin.Engine) {
 
 	api := r.Group("/api")
 	{
-		// Pasang limiterMiddleware KHUSUS di rute login agar tidak di-brute force oleh bot
+		
 		api.POST("/auth/login", limiterMiddleware, controllers.Login)
 	}
 
+	
 	protected := api.Group("/")
-	protected.Use(middleware.Auth())
+	protected.Use(middleware.Auth()) 
 	{
 		protected.GET("/users", controllers.GetUsers)
 		protected.GET("/me", controllers.Me)
+		
+		protected.GET("/paket", controllers.GetPaket)
+		protected.POST("/paket", limiterMiddleware, controllers.CreatePaket)
+		protected.GET("/paket/:id", controllers.GetPaketByID)
+		protected.PUT("/paket/:id", limiterMiddleware, controllers.UpdatePaket)
+		protected.DELETE("/paket/:id", limiterMiddleware, controllers.DeletePaket)
+
+		
 		protected.GET("/customers", controllers.GetCustomer)
-		protected.POST("/customers", limiterMiddleware, controllers.CreateCustomer)
+		protected.POST("/customers", skipOptionsLimiter, controllers.CreateCustomer)
 		protected.GET("/customers/:id", controllers.GetCustomerByID)
-		protected.PUT("/customers/:id",limiterMiddleware, controllers.UpdateCustomer)
-		protected.POST("/customers/sendMessage/:id", limiterMiddleware, controllers.SendPasswordToEmailCustomer)
+		protected.PUT("/customers/:id",skipOptionsLimiter, controllers.UpdateCustomer)
+		protected.POST("/customers/sendMessage/:id", skipOptionsLimiter, controllers.SendPasswordToEmailCustomer)
 
 
 		protected.GET("/admins", controllers.GetAdmin)
-		protected.POST("/admin", limiterMiddleware, controllers.CreateAdmin)
+		protected.POST("/admin", skipOptionsLimiter, controllers.CreateAdmin)
 		protected.GET("/admin/:id", controllers.GetAdminByID)
-		protected.PUT("/admin/:id",limiterMiddleware, controllers.UpdateAdmin)
-
-
-		protected.GET("/paket", controllers.GetPaket)
+		protected.PUT("/admin/:id",skipOptionsLimiter, controllers.UpdateAdmin)
 	}
 }

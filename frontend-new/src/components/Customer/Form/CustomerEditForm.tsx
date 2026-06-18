@@ -129,7 +129,7 @@ const [error, setError] = useState(false);
           <Input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)} // 👈 Ditambahkan agar bisa diketik
+            onChange={(e) => setName(e.target.value)} 
             placeholder="Masukan Nama Pelanggan"
 
           />
@@ -154,7 +154,7 @@ const [error, setError] = useState(false);
           <Input
             type="text"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)} // 👈 Ditambahkan agar bisa diketik
+            onChange={(e) => setPhone(e.target.value)} 
             placeholder="Masukan Nomor Handphone"
           />
         </div>
@@ -162,7 +162,7 @@ const [error, setError] = useState(false);
         {/* Status Aktif */}
         <div>
           <Switch
-            key={isActive ? "active" : "inactive"} // 👈 Memaksa Switch render ulang sesuai status data database
+            key={isActive ? "active" : "inactive"}
             label="Aktif"
             defaultChecked={isActive}
             onChange={(checked) => {

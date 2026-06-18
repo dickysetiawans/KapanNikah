@@ -9,3 +9,7 @@ type Paket struct {
 
 	DeskripsiPaket string `json:"deskripsi_paket" gorm:"type:text"`
 }
+
+func (Paket) TableName() string {
+    return "paket"
+}
