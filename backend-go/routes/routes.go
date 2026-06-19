@@ -40,7 +40,7 @@ func SetupRoutes(r *gin.Engine) {
 		
 		api.POST("/auth/login", limiterMiddleware, controllers.Login)
 	}
-
+ 
 	
 	protected := api.Group("/")
 	protected.Use(middleware.Auth()) 
@@ -56,15 +56,23 @@ func SetupRoutes(r *gin.Engine) {
 
 		
 		protected.GET("/customers", controllers.GetCustomer)
-		protected.POST("/customers", skipOptionsLimiter, controllers.CreateCustomer)
+		protected.POST("/customers", limiterMiddleware, controllers.CreateCustomer)
 		protected.GET("/customers/:id", controllers.GetCustomerByID)
-		protected.PUT("/customers/:id",skipOptionsLimiter, controllers.UpdateCustomer)
-		protected.POST("/customers/sendMessage/:id", skipOptionsLimiter, controllers.SendPasswordToEmailCustomer)
+		protected.PUT("/customers/:id",limiterMiddleware, controllers.UpdateCustomer)
+		protected.POST("/customers/sendMessage/:id", limiterMiddleware, controllers.SendPasswordToEmailCustomer)
 
 
 		protected.GET("/admins", controllers.GetAdmin)
-		protected.POST("/admin", skipOptionsLimiter, controllers.CreateAdmin)
+		protected.POST("/admin", limiterMiddleware, controllers.CreateAdmin)
 		protected.GET("/admin/:id", controllers.GetAdminByID)
-		protected.PUT("/admin/:id",skipOptionsLimiter, controllers.UpdateAdmin)
+		protected.PUT("/admin/:id",limiterMiddleware, controllers.UpdateAdmin)
+
+		protected.GET("/kegiatan", controllers.GetKegiatan)
+		protected.POST("/kegiatan", limiterMiddleware, controllers.CreateKegiatan)
+		protected.GET("/kegiatan/:id", controllers.GetKegiatanByID)
+		protected.PUT("/kegiatan/:id", limiterMiddleware, controllers.UpdateKegiatan)
+		protected.DELETE("/kegiatan/:id", limiterMiddleware, controllers.DeleteKegiatan)
+
+
 	}
 }

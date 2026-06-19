@@ -168,6 +168,15 @@ const AppSidebar: React.FC = () => {
         },
       );
     }
+    if(!othersItems.some((item) => item.name === "Kegiatan")){
+      othersItems.push(
+        {
+            icon: <BoxCubeIcon />,
+            name: "Kegiatan",
+            path: "/kegiatan",
+        },
+      );
+    }
 
   }
 

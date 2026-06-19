@@ -94,6 +94,11 @@ import Paket from "./pages/Paket/Paket";
 import AddPaket from "./pages/Paket/AddPaket";
 import EditPaket from "./pages/Paket/EditPaket";
 import ViewPaket from "./pages/Paket/ViewPaket";
+
+import Kegiatan from "./pages/Kegiatan/Kegiatan";
+// import AddKegiatan from "./pages/Kegiatan/AddKegiatan";
+// import EditKegiatan from "./pages/Kegiatan/EditKegiatan";
+// import ViewKegiatan from "./pages/Kegiatan/ViewKegiatan";
 export default function App() {
   return (
     <Router>
@@ -154,6 +159,7 @@ export default function App() {
               }
             />
 
+            {/* Paket */}
             <Route path="/paket/" element={
                 <RoleRoute roles={[1]}>
                   <Paket />
@@ -178,6 +184,38 @@ export default function App() {
                 </RoleRoute>
               }
             />
+
+            {/* Kegiatan */}
+            <Route path="/kegiatan/" element={
+                <RoleRoute roles={[1]}>
+                  <Kegiatan />
+                </RoleRoute>
+              }
+            />
+
+           {/* <Route path="/kegiatan/tambah" element={
+                <RoleRoute roles={[1]}>
+                  <AddKegiatan />
+                </RoleRoute>
+              }
+            />*/}
+
+            {/*<Route path="/kegiatan/edit/:id" element={
+                <RoleRoute roles={[1]}>
+                  <EditKegiatan />
+                </RoleRoute>
+              }
+            />*/}
+
+{/*            <Route path="/kegiatan/view/:id" element={
+                <RoleRoute roles={[1]}>
+                  <ViewKegiatan />
+                </RoleRoute>
+              }
+            />*/}
+
+
+
             {/* Admin */}
            {/* <Route path="/admin" element={
                 <RoleRoute roles={[1]}>
