@@ -1,0 +1,12 @@
+
+
+export const KEGIATAN = {
+    WEDDING: "WEDDING",
+   
+};
+export const CODE_FITUR = {
+    SHOW_BRIDE_NAME: "SHOW_BRIDE_NAME",
+    SHOW_GALERI:"SHOW_GALERI",
+    ABSENT_ATTANDANCE: "ABSENT_ATTANDANCE",
+
+};

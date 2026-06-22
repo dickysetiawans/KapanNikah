@@ -5,11 +5,12 @@ import (
 	"wedding-backend/controllers"
 	"wedding-backend/middleware"
 
-	"github.com/gin-contrib/cors"
+	// "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/ulule/limiter/v3"
 	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
+	"net/http"
 )
 
 
@@ -71,8 +72,13 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/kegiatan", limiterMiddleware, controllers.CreateKegiatan)
 		protected.GET("/kegiatan/:id", controllers.GetKegiatanByID)
 		protected.PUT("/kegiatan/:id", limiterMiddleware, controllers.UpdateKegiatan)
-		protected.DELETE("/kegiatan/:id", limiterMiddleware, controllers.DeleteKegiatan)
+		// protected.DELETE("/kegiatan/:id", limiterMiddleware, controllers.DeleteKegiatan)
 
+		// Fitur
+		protected.GET("/fitur", controllers.GetFitur)
+		protected.POST("/fitur", limiterMiddleware, controllers.CreateFitur)
+		protected.GET("/fitur/:id", controllers.GetFiturByID)
+		protected.PUT("/fitur/:id", limiterMiddleware, controllers.UpdateFitur)
 
 	}
 }

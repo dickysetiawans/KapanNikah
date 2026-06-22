@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv" // Tambahkan package ini untuk konversi string ke int
 
 	"github.com/golang-migrate/migrate/v4"
 
@@ -14,9 +15,7 @@ import (
 )
 
 func main() {
-
 	err := godotenv.Load()
-
 	if err != nil {
 		log.Fatal(".env not found")
 	}
@@ -34,39 +33,47 @@ func main() {
 		"file://migrations",
 		dbURL,
 	)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: go run cmd/migrate.go [up|down]")
+		log.Fatal("Usage: go run cmd/migrate.go [up|down|force]")
 	}
 
 	command := os.Args[1]
 
 	switch command {
-
 	case "up":
-
-		if err := m.Up(); err != nil &&
-			err.Error() != "no change" {
-
+		if err := m.Up(); err != nil && err.Error() != "no change" {
 			log.Fatal(err)
 		}
-
 		fmt.Println("Migration Success")
 
 	case "down":
-
 		if err := m.Steps(-1); err != nil {
 			log.Fatal(err)
 		}
-
 		fmt.Println("Rollback Success")
 
-	default:
+	// === TAMBAHKAN CASE FORCE DI SINI ===
+	case "force":
+		if len(os.Args) < 3 {
+			log.Fatal("Usage: go run cmd/migrate.go force [version_number]")
+		}
+		
+		// Ambil argumen versi angka (misal: 6 atau 7)
+		version, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			log.Fatal("Version must be a number")
+		}
 
+		if err := m.Force(version); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Force Version to %d Success\n", version)
+
+	default:
 		fmt.Println("Unknown Command")
 	}
 }

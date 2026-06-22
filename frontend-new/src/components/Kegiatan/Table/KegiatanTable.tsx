@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../ui/table";
+import { KEGIATAN } from "../../../Codec/Codec";
 
 // 1. Perbaiki tipe data interface (Gunakan number, sesuaikan dengan properti dari API)
 interface Kegiatans {
@@ -77,7 +78,9 @@ export default function KegiatanTable() {
     setSearchTerm(e.target.value);
     setCurrentPage(1); 
   };
- 
+  const labelKegiatan = {
+    [KEGIATAN.WEDDING]: "WD - Pernikahan",  
+  };
 
   return (
     <div className="space-y-4">
@@ -119,18 +122,18 @@ export default function KegiatanTable() {
                       {Kegiatan.nama_kegiatan}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-600 text-start text-theme-sm">
-                      {/* Format ke rupiah atau lokal biar rapi */}
-                      Rp {Kegiatan.code_kegiatan.toLocaleString("id-ID")}
+                      
+                      {labelKegiatan[Kegiatan.code_kegiatan] || Kegiatan.code_kegiatan}
                     </TableCell>
                     
                     <TableCell className="px-4 py-3 text-center text-theme-sm">
                       <div className="flex items-center justify-center gap-2">
-                        <button
+                        {/*<button
                           onClick={() => handleView(Kegiatan.ID)}
                           className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition"
                         >
                           Detail
-                        </button>
+                        </button>*/}
                         <button
                           onClick={() => handleEdit(Kegiatan.ID)}
                           className="px-2.5 py-1 text-xs font-medium text-amber-600 bg-amber-50 rounded-md hover:bg-amber-100 transition"

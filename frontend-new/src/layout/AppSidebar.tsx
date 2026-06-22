@@ -171,11 +171,22 @@ const AppSidebar: React.FC = () => {
     if(!othersItems.some((item) => item.name === "Kegiatan")){
       othersItems.push(
         {
-            icon: <BoxCubeIcon />,
+            icon: <CalenderIcon />,
             name: "Kegiatan",
             path: "/kegiatan",
         },
       );
+
+    }
+    if(!othersItems.some((item) => item.name === "Fitur")){
+      othersItems.push(
+        {
+            icon: <PlugInIcon />,
+            name: "Fitur",
+            path: "/fitur",
+        },
+      );
+      
     }
 
   }
