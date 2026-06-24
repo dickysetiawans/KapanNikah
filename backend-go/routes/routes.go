@@ -54,6 +54,9 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/paket/:id", controllers.GetPaketByID)
 		protected.PUT("/paket/:id", limiterMiddleware, controllers.UpdatePaket)
 		protected.DELETE("/paket/:id", limiterMiddleware, controllers.DeletePaket)
+		protected.GET("/paket/:id/detail-fitur", controllers.GetDetailFiturByPaketID)
+
+
 
 		
 		protected.GET("/customers", controllers.GetCustomer)
@@ -79,6 +82,6 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/fitur", limiterMiddleware, controllers.CreateFitur)
 		protected.GET("/fitur/:id", controllers.GetFiturByID)
 		protected.PUT("/fitur/:id", limiterMiddleware, controllers.UpdateFitur)
-
+		protected.GET("/fitur/aktif", controllers.GetFiturByIDAndIsActive)
 	}
 }

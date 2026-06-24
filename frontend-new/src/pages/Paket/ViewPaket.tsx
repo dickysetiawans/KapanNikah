@@ -11,7 +11,7 @@ export default function ViewPaket() {
         description="sss"
       />
       <PageBreadcrumb pageTitle="Detail Paket" />
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6">
         <div className="space-y-12">
           <PaketViewForm />
         </div>
