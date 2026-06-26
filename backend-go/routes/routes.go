@@ -55,6 +55,7 @@ func SetupRoutes(r *gin.Engine) {
 		protected.PUT("/paket/:id", limiterMiddleware, controllers.UpdatePaket)
 		protected.DELETE("/paket/:id", limiterMiddleware, controllers.DeletePaket)
 		protected.GET("/paket/:id/detail-fitur", controllers.GetDetailFiturByPaketID)
+		protected.GET("/paket/:id/detail-template", controllers.GetDetailTemplateByPaketID)
 
 
 

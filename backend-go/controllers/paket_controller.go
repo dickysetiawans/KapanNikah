@@ -410,3 +410,27 @@ func GetDetailFiturByPaketID(c *gin.Context) {
 
     c.JSON(http.StatusOK, details)
 }
+
+func GetDetailTemplateByPaketID(c *gin.Context) {
+    paketID := c.Param("id")
+    var details []responses.TemplateResponse
+
+    err := config.DB.Table("template t").
+        Select("t.id, t.paket_id, t.nama_template, t.code_template").
+        Where("t.paket_id = ? ", paketID).
+        Scan(&details).Error
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Gagal mengambil paket detail template: " + err.Error(),
+        })
+        return
+    }
+
+    if len(details) == 0 {
+        c.JSON(http.StatusOK, []responses.TemplateResponse{})
+        return
+    }
+
+    c.JSON(http.StatusOK, details)
+}
