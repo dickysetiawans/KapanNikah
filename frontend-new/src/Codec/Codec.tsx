@@ -10,3 +10,10 @@ export const CODE_FITUR = {
     ABSENT_ATTANDANCE: "ABSENT_ATTANDANCE",
 
 };
+
+export const CODE_TEMPLATE = {
+    TEMPLATE1: "TMPT1",
+    TEMPLATE2:"TMPT2",
+    TEMPLATE3: "TMPT3",
+
+};

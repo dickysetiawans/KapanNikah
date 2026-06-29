@@ -58,8 +58,6 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/paket/:id/detail-template", controllers.GetDetailTemplateByPaketID)
 
 
-
-		
 		protected.GET("/customers", controllers.GetCustomer)
 		protected.POST("/customers", limiterMiddleware, controllers.CreateCustomer)
 		protected.GET("/customers/:id", controllers.GetCustomerByID)

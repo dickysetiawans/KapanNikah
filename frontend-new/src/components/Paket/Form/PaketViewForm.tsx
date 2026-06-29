@@ -15,7 +15,11 @@ interface PaketDetail {
   code_fitur: string;
   harga_fitur: number;
 }
-
+interface PaketDetailTemplate {
+  id: number;
+  paket_id: number;
+  code_template: string;
+}
 export default function PaketViewForm() {
   const navigate = useNavigate();
   const { id } = useParams(); 
@@ -24,6 +28,7 @@ export default function PaketViewForm() {
   const [deskripsiPaket, setDeskripsiPaket] = useState("");
   const [hargaDisplay, setHargaDisplay] = useState("");
   const [detailFitur, setDetailFitur] = useState<PaketDetail[]>([]);
+  const [detailTemplate, setDetailTemplate] = useState<PaketDetailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPaketDetail = () => {
@@ -49,6 +54,12 @@ export default function PaketViewForm() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setDetailFitur(detailResponse.data);
+
+        const detailTemplateResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/paket/${id}/detail-template`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setDetailTemplate(detailTemplateResponse.data);
 
       } catch (err: any) {
         console.error(err);
@@ -139,6 +150,36 @@ export default function PaketViewForm() {
                     <td className="p-3 text-right text-gray-700">
                       Rp {item.harga_fitur.toLocaleString("id-ID")}
                     </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-8">
+          <h3 className="text-md font-semibold text-gray-700 mb-4">Template yang Termasuk:</h3>
+          
+          <table className="w-full border-collapse border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="p-3 border-b border-gray-200 w-16">No</th>
+                <th className="p-3 border-b border-gray-200">Kode Template</th>
+                <th className="p-3 border-b border-gray-200">Nama Template</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white text-sm">
+              {detailTemplate.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-4 text-center text-gray-500 italic">
+                    Tidak ada Template tambahan pada paket ini.
+                  </td>
+                </tr>
+              ) : (
+                detailTemplate.map((item, index) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="p-3 text-gray-500 font-medium">{index + 1}</td>
+                    <td className="p-3 font-mono text-xs text-gray-600">{item.code_template}</td>
+                    <td className="p-3 font-medium text-gray-800">{item.nama_template}</td>
                   </tr>
                 ))
               )}

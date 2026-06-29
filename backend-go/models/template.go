@@ -9,6 +9,6 @@ type Template struct {
 
 }
 
-func (PaketDetailFitur) TableName() string {
+func (Template) TableName() string {
     return "template"
 }

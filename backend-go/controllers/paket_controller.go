@@ -47,7 +47,7 @@ func sanitizeText(input string) string {
 }
 func CreatePaket(c *gin.Context) {
     var input requests.CreatePaketRequest
-
+    var detailTemplateDataToInsert []models.Template
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
             "message": "Data tidak valid: " + err.Error(),
@@ -90,6 +90,29 @@ func CreatePaket(c *gin.Context) {
         }
         fiturMap[item.FiturID] = true
     }
+    templateMap := make(map[string]bool)
+    for index, item := range input.DetailTemplate {
+        if item.CodeTemplate == "" {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Template pada baris ke-%d tidak boleh kosong", index+1),
+            })
+            return
+        }
+        if _, exists := templateMap[item.CodeTemplate]; exists {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Gagal menyimpan, terdapat fitur yang sama/duplikat dalam satu paket",
+            })
+            return
+        }
+        templateMap[item.CodeTemplate] = true
+
+        detailTemplateDataToInsert = append(detailTemplateDataToInsert, models.Template{
+            NamaTemplate: item.NamaTemplate,
+            CodeTemplate: item.CodeTemplate,
+           
+        })
+    }
+
     tx := config.DB.Begin()
     defer func() {
         if r := recover(); r != nil {
@@ -99,7 +122,6 @@ func CreatePaket(c *gin.Context) {
 
     var totalHarga float64 = 0
     var detailDataToInsert []models.PaketDetailFitur
-
     for _, item := range input.DetailFitur {
         var fitur models.Fitur
         
@@ -149,7 +171,15 @@ func CreatePaket(c *gin.Context) {
             return
         }
     }
+    for _, detail := range detailTemplateDataToInsert {
+        detail.PaketId = paket.ID 
 
+        if err := tx.Create(&detail).Error; err != nil {
+            tx.Rollback() 
+            c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan detail template paket"})
+            return
+        }
+    }
     if err := tx.Commit().Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memproses transaksi data"})
         return
@@ -188,6 +218,7 @@ func UpdatePaket(c *gin.Context) {
         })
         return
     }
+
     namaPaket := sanitizeText(input.NamaPaket)
     if len(namaPaket) < 3 || len(namaPaket) > 100 {
         c.JSON(http.StatusBadRequest, gin.H{"message": "Nama paket harus antara 3 - 100 karakter"})
@@ -205,10 +236,9 @@ func UpdatePaket(c *gin.Context) {
         return
     }
 
-  
+    // 1. VALIDASI DETAIL FITUR
     fiturMap := make(map[uint]bool)
     var incomingFiturIDs []uint
-
     for index, item := range input.DetailFitur {
         if item.FiturID == 0 {
             c.JSON(http.StatusBadRequest, gin.H{
@@ -216,7 +246,6 @@ func UpdatePaket(c *gin.Context) {
             })
             return
         }
-
         if _, exists := fiturMap[item.FiturID]; exists {
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": "Gagal menyimpan, terdapat fitur yang sama/duplikat dalam satu paket",
@@ -225,6 +254,26 @@ func UpdatePaket(c *gin.Context) {
         }
         fiturMap[item.FiturID] = true
         incomingFiturIDs = append(incomingFiturIDs, item.FiturID)
+    }
+
+    // 2. VALIDASI DETAIL TEMPLATE (Baru ditambahkan)
+    templateMap := make(map[string]bool)
+    var incomingTemplateCodes []string
+    for index, item := range input.DetailTemplate {
+        if item.CodeTemplate == "" {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Template pada baris ke-%d tidak boleh kosong", index+1),
+            })
+            return
+        }
+        if _, exists := templateMap[item.CodeTemplate]; exists {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Gagal menyimpan, terdapat template yang sama/duplikat dalam satu paket",
+            })
+            return
+        }
+        templateMap[item.CodeTemplate] = true
+        incomingTemplateCodes = append(incomingTemplateCodes, item.CodeTemplate)
     }
 
     var paket models.Paket
@@ -240,11 +289,11 @@ func UpdatePaket(c *gin.Context) {
         }
     }()
 
+    // 3. PROSES VERIFIKASI HARGA & DATA FITUR MASTER
     var totalHarga float64 = 0
     type DetailValidData struct {
         FiturID    uint
         HargaFitur float64
-        CodeFitur  string
     }
     var verifiedDetails []DetailValidData
 
@@ -268,6 +317,8 @@ func UpdatePaket(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"message": "Total harga paket tidak valid"})
         return
     }
+
+    // 4. SINKRONISASI TABEL FITUR DETAIL (Hapus item yang dikeluarkan)
     err := tx.Where("paket_id = ? AND fitur_id NOT IN ?", paket.ID, incomingFiturIDs).
         Delete(&models.PaketDetailFitur{}).Error
     if err != nil {
@@ -276,13 +327,12 @@ func UpdatePaket(c *gin.Context) {
         return
     }
 
+    // Upsert Fitur Detail
     for _, detail := range verifiedDetails {
         var existingDetail models.PaketDetailFitur
-        
         errFind := tx.Where("paket_id = ? AND fitur_id = ?", paket.ID, detail.FiturID).First(&existingDetail).Error
 
         if errors.Is(errFind, gorm.ErrRecordNotFound) {
-            
             newDetail := models.PaketDetailFitur{
                 PaketId:    paket.ID,
                 FiturId:    detail.FiturID,
@@ -295,7 +345,6 @@ func UpdatePaket(c *gin.Context) {
             }
         } else if errFind == nil {
             existingDetail.HargaFitur = detail.HargaFitur
-            
             if err := tx.Save(&existingDetail).Error; err != nil {
                 tx.Rollback()
                 c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui detail fitur"})
@@ -308,6 +357,63 @@ func UpdatePaket(c *gin.Context) {
         }
     }
 
+    // 5. SINKRONISASI TABEL TEMPLATE DETAIL (Baru ditambahkan)
+    // Langkah A: Hapus template lama dari database yang tidak dikirim lagi oleh frontend
+    var incomingTemplateIDs []uint
+    for _, item := range input.DetailTemplate {
+        if item.ID > 0 {
+            incomingTemplateIDs = append(incomingTemplateIDs, item.ID)
+        }
+    }
+
+    // Langkah B: Upsert data template baru/modifikasi
+    queryTemplateDel := tx.Where("paket_id = ?", paket.ID)
+    if len(incomingTemplateIDs) > 0 {
+        queryTemplateDel = queryTemplateDel.Where("id NOT IN ?", incomingTemplateIDs)
+    }
+    if errTemplateDel := queryTemplateDel.Delete(&models.Template{}).Error; errTemplateDel != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyelaraskan detail template lama"})
+        return
+    }
+    for _, item := range input.DetailTemplate {
+        var existingTemplate models.Template
+        if item.ID > 0 {
+            errFindTemplate := tx.Where("id = ? AND paket_id = ?", item.ID, paket.ID).First(&existingTemplate).Error
+
+            if errFindTemplate == nil {
+                // Jika Update
+                existingTemplate.CodeTemplate = item.CodeTemplate
+                existingTemplate.NamaTemplate = item.NamaTemplate
+                if err := tx.Save(&existingTemplate).Error; err != nil {
+                    tx.Rollback()
+                    c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data template"})
+                    return
+                }
+            } else if errors.Is(errFindTemplate, gorm.ErrRecordNotFound) {
+                
+                tx.Rollback()
+                c.JSON(http.StatusBadRequest, gin.H{"message": "ID Template tidak valid"})
+                return
+            } else {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memproses pengecekan template"})
+                return
+            }
+        } else {
+            // Jika Update
+            newTemplate := models.Template{
+                PaketId:      paket.ID,
+                CodeTemplate: item.CodeTemplate,
+                NamaTemplate: item.NamaTemplate,
+            }
+            if err := tx.Create(&newTemplate).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menambah template baru"})
+                return
+            }
+        }
+    }
     paket.NamaPaket = namaPaket
     paket.HargaPaket = totalHarga
     paket.DeskripsiPaket = deskripsiPaket
@@ -318,6 +424,7 @@ func UpdatePaket(c *gin.Context) {
         return
     }
 
+    
     if err := tx.Commit().Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal melakukan commit perubahan"})
         return
@@ -327,7 +434,6 @@ func UpdatePaket(c *gin.Context) {
         "message": "Paket dan detail berhasil diperbarui",
     })
 }
-
 func DeletePaket(c *gin.Context) {
     id := c.Param("id")
     var paket models.Paket
@@ -360,6 +466,13 @@ func DeletePaket(c *gin.Context) {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{
             "message": "Gagal menghapus detail fitur paket",
+        })
+        return
+    }
+    if err := tx.Where("paket_id = ?", paket.ID).Delete(&models.Template{}).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Gagal menghapus detail template paket",
         })
         return
     }
