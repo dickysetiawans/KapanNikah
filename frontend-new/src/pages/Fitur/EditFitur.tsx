@@ -8,7 +8,7 @@ export default function EditFitur() {
     <div>
       <PageMeta
         title="Ubah Fitur - KapanNikah"
-        description="sss"
+        description="-"
       />
       <PageBreadcrumb pageTitle="Ubah Fitur" />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

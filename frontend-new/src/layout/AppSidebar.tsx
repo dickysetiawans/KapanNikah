@@ -15,6 +15,7 @@ import {
   TableIcon,
   UserCircleIcon,
   SettingIcon,
+  LocationIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -159,15 +160,7 @@ const AppSidebar: React.FC = () => {
         },
       );
     }
-    if(!othersItems.some((item) => item.name === "Paket")){
-      othersItems.push(
-        {
-            icon: <BoxCubeIcon />,
-            name: "Paket",
-            path: "/paket",
-        },
-      );
-    }
+    
     if(!othersItems.some((item) => item.name === "Kegiatan")){
       othersItems.push(
         {
@@ -187,6 +180,24 @@ const AppSidebar: React.FC = () => {
         },
       );
       
+    }
+    if(!othersItems.some((item) => item.name === "Paket")){
+      othersItems.push(
+        {
+            icon: <BoxCubeIcon />,
+            name: "Paket",
+            path: "/paket",
+        },
+      );
+    }
+    if(!othersItems.some((item) => item.name === "Acara")){
+      othersItems.push(
+        {
+            icon: <LocationIcon />,
+            name: "Acara",
+            path: "/acara",
+        },
+      );
     }
 
   }

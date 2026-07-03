@@ -10,9 +10,10 @@ type DetailTemplateRequest struct {
     NamaTemplate string `json:"nama_template" binding:"required"`
 }
 type CreatePaketRequest struct {
-    NamaPaket      string               `json:"namaPaket" binding:"required"`
-    DeskripsiPaket string               `json:"deskripsiPaket" binding:"required"`
-    HargaPaket     float64 `json:"hargaPaket" binding:"required,gt=0"`
+    KegiatanId uint `json:"kegiatan_id" binding:"required"`
+    NamaPaket  string  `json:"namaPaket" binding:"required"`
+    DeskripsiPaket string `json:"deskripsiPaket" binding:"required"`
+    HargaPaket float64 `json:"hargaPaket" binding:"required,gt=0"`
     DetailFitur    []DetailFiturRequest `json:"detail_fitur" binding:"required,dive,required"`
     DetailTemplate    []DetailTemplateRequest `json:"detail_template" binding:"required,dive,required"`
 }

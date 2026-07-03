@@ -6,7 +6,6 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router";
 import CKEditorField from "../../Ckeditor/CKEditorField"; 
 
-
 interface PaketDetail {
   id: number;
   paket_id: number;
@@ -15,11 +14,14 @@ interface PaketDetail {
   code_fitur: string;
   harga_fitur: number;
 }
+
 interface PaketDetailTemplate {
   id: number;
   paket_id: number;
   code_template: string;
+  nama_template?: string; // Tambahkan opsional jika sewaktu-waktu terisi dari JOIN backend
 }
+
 export default function PaketViewForm() {
   const navigate = useNavigate();
   const { id } = useParams(); 
@@ -27,6 +29,10 @@ export default function PaketViewForm() {
   const [hargaPaket, setHargaPaket] = useState("");
   const [deskripsiPaket, setDeskripsiPaket] = useState("");
   const [hargaDisplay, setHargaDisplay] = useState("");
+  
+  // --- State Baru untuk Kegiatan ---
+  const [namaKegiatan, setNamaKegiatan] = useState("-");
+
   const [detailFitur, setDetailFitur] = useState<PaketDetail[]>([]);
   const [detailTemplate, setDetailTemplate] = useState<PaketDetailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,31 +41,45 @@ export default function PaketViewForm() {
     const getPaketDetail = async () => {
       try {
         const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
         
-        // Fetch Data Paket (Header)
+        // 1. Ambil Semua Master Kegiatan untuk Mapping Nama Kegiatan
+        const resKegiatan = await axios.get(`${import.meta.env.VITE_API_URL}/api/kegiatan`, { headers });
+        const listKegiatan = resKegiatan.data || [];
+
+        // 2. Fetch Data Paket (Header)
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/paket/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers }
         );
         const paket = response.data;
         setNamaPaket(paket.nama_paket);
         setDeskripsiPaket(paket.deskripsi_paket);
 
-        const raw = String(paket.harga_paket).replace(/\./g, "");
+        const raw = String(paket.harga_paket || paket.HargaPaket || "").replace(/\./g, "");
         setHargaPaket(raw);
         setHargaDisplay(Number(raw).toLocaleString("id-ID"));
 
+        // Mapping mencari nama kegiatan berdasarkan id yang cocok
+        const targetKegiatanId = paket.kegiatan_id || paket.KegiatanId;
+        const matchedKegiatan = listKegiatan.find((k: any) => Number(k.ID || k.id) === Number(targetKegiatanId));
+        if (matchedKegiatan) {
+          setNamaKegiatan(matchedKegiatan.nama_kegiatan);
+        }
+
+        // 3. Fetch Detail Fitur
         const detailResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/paket/${id}/detail-fitur`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers }
         );
-        setDetailFitur(detailResponse.data);
+        setDetailFitur(detailResponse.data || []);
 
+        // 4. Fetch Detail Template
         const detailTemplateResponse = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/paket/${id}/detail-template`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers }
         );
-        setDetailTemplate(detailTemplateResponse.data);
+        setDetailTemplate(detailTemplateResponse.data || []);
 
       } catch (err: any) {
         console.error(err);
@@ -89,30 +109,47 @@ export default function PaketViewForm() {
   return (
     <ComponentCard title="Detail Data Paket">
       <div className="space-y-6">
+        
+        {/* Row Kegiatan Utama Paket */}
         <div>
-          <Label htmlFor="namaPaket">Nama Paket</Label>
+          <Label htmlFor="namaKegiatan">Kegiatan Utama Paket</Label>
           <Input
             type="text"
             readOnly
-            value={namaPaket}
+            value={namaKegiatan}
             onChange={() => {}}  
-            placeholder="Masukan Nama Paket"
-            className="bg-gray-50 cursor-not-allowed dark:bg-gray-800"
+            className="bg-gray-50 cursor-not-allowed dark:bg-gray-800 font-medium text-blue-600"
           />
         </div>
-        <div>
-          <Label htmlFor="hargaPaket">Harga Paket (Total)</Label>
-          <Input
-            type="text"
-            readOnly
-            value={hargaDisplay}
-            onChange={() => {}}  
-            placeholder="Masukan Harga Paket"
-            namePrefix="Rp"
-            prefixOn={true}
-            className="bg-gray-50 cursor-not-allowed dark:bg-gray-800 font-bold text-green-600"
-          />
+
+        {/* Row Nama Paket & Harga */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="namaPaket">Nama Paket</Label>
+            <Input
+              type="text"
+              readOnly
+              value={namaPaket}
+              onChange={() => {}}  
+              placeholder="Masukan Nama Paket"
+              className="bg-gray-50 cursor-not-allowed dark:bg-gray-800"
+            />
+          </div>
+          <div>
+            <Label htmlFor="hargaPaket">Harga Paket (Total)</Label>
+            <Input
+              type="text"
+              readOnly
+              value={hargaDisplay}
+              onChange={() => {}}  
+              placeholder="Masukan Harga Paket"
+              namePrefix="Rp"
+              prefixOn={true}
+              className="bg-gray-50 cursor-not-allowed dark:bg-gray-800 font-bold text-green-600"
+            />
+          </div>
         </div>
+
         <div>
           <Label htmlFor="deskripsiPaket">Deskripsi Paket</Label>
           <CKEditorField 
@@ -122,6 +159,7 @@ export default function PaketViewForm() {
           />
         </div>
 
+        {/* --- Bagian Tabel Detail Fitur --- */}
         <div className="mt-8">
           <h3 className="text-md font-semibold text-gray-700 mb-4">Fitur yang Termasuk:</h3>
           
@@ -156,6 +194,8 @@ export default function PaketViewForm() {
             </tbody>
           </table>
         </div>
+
+        {/* --- Bagian Tabel Detail Template --- */}
         <div className="mt-8">
           <h3 className="text-md font-semibold text-gray-700 mb-4">Template yang Termasuk:</h3>
           
@@ -170,7 +210,7 @@ export default function PaketViewForm() {
             <tbody className="divide-y divide-gray-200 bg-white text-sm">
               {detailTemplate.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-4 text-center text-gray-500 italic">
+                  <td colSpan={3} className="p-4 text-center text-gray-500 italic">
                     Tidak ada Template tambahan pada paket ini.
                   </td>
                 </tr>
@@ -179,7 +219,9 @@ export default function PaketViewForm() {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="p-3 text-gray-500 font-medium">{index + 1}</td>
                     <td className="p-3 font-mono text-xs text-gray-600">{item.code_template}</td>
-                    <td className="p-3 font-medium text-gray-800">{item.nama_template}</td>
+                    <td className="p-3 font-medium text-gray-800">
+                      {item.nama_template || item.code_template.replace("TEMPLATE", "Template ")}
+                    </td>
                   </tr>
                 ))
               )}
@@ -189,14 +231,13 @@ export default function PaketViewForm() {
       </div>
 
       <div className="mt-8 flex gap-2">
-        <a href="/paket">
-          <button
-            type="button"
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-          >
-            Kembali
-          </button>
-        </a>
+        <button
+          type="button"
+          onClick={() => navigate("/paket")}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+        >
+          Kembali
+        </button>
       </div>
     </ComponentCard>
   );

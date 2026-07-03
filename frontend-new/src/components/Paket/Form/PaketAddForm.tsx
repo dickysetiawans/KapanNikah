@@ -11,24 +11,32 @@ import { CODE_TEMPLATE } from "../../../Codec/Codec";
 interface FiturOption {
   id: number;
   nama_fitur: string; 
-  harga: number;      
+  harga_fitur: number;      
+  kegiatan_id: number;
+  code_fitur: string;
+  is_active: boolean;
 }
+
 interface TemplateOption {
   code_template: string;  
-  nama_code_template:string     
+  nama_code_template: string;     
 }
+
 interface SelectOption {
   value: string;
   label: string;
 }
+
 interface SelectOptionTemplate {
   value: string;
   label: string;
 }
+
 interface DetailFiturRow {
   fitur_id: string;
   harga_fitur: number;
 }
+
 interface DetailTemplateRow {
   code_template: string;
   nama_template: string;
@@ -38,40 +46,86 @@ export default function PaketAddForm() {
   const navigate = useNavigate();
   const [namaPaket, setNamaPaket] = useState("");
   const [deskripsiPaket, setDeskripsiPaket] = useState("");
-  const [listFitur, setListFitur] = useState<FiturOption[]>([]);
+  
+  // --- States Dropdown Kegiatan Utama ---
+  const [listKegiatan, setListKegiatan] = useState<SelectOption[]>([]);
+  const [selectedKegiatan, setSelectedKegiatan] = useState<SelectOption | null>(null);
+
+  // --- States Master Data Lainnya ---
+  const [listFitur, setListFitur] = useState<FiturOption[]>([]); // Diisi dinamis via AJAX
   const [listTemplate, setListTemplate] = useState<TemplateOption[]>([]);
+  
   const [detailFitur, setDetailFitur] = useState<DetailFiturRow[]>([
     { fitur_id: "", harga_fitur: 0 }
   ]);
   const [detailTemplate, setDetailTemplate] = useState<DetailTemplateRow[]>([
-    { code_template: "", nama_template:"" }
+    { code_template: "", nama_template: "" }
   ]);
+
   const codeOptions = [
     { code_template: CODE_TEMPLATE.TEMPLATE1, nama_code_template: "Template 1"},
     { code_template: CODE_TEMPLATE.TEMPLATE2, nama_code_template: "Template 2"},
     { code_template: CODE_TEMPLATE.TEMPLATE3, nama_code_template: "Template 3"},
   ];  
   
+  // 1. Ambil data master Kegiatan saja saat halaman pertama kali dibuka
   useEffect(() => {
-    const fetchFitur = async () => {
+    const fetchMasterKegiatan = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/fitur/aktif`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setListFitur(res.data); 
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const resKegiatan = await axios.get(`${import.meta.env.VITE_API_URL}/api/kegiatan`, { headers });
+        setListKegiatan(resKegiatan.data.map((k: any) => ({
+          value: String(k.ID),
+          label: k.nama_kegiatan
+        })));
       } catch (err) {
-        console.error("Gagal memuat list fitur", err);
+        console.error("Gagal memuat list kegiatan:", err);
       }
     };
-    fetchFitur();
+    
+    fetchMasterKegiatan();
     setListTemplate(codeOptions);
   }, []);
+  useEffect(() => {
+    const fetchFiturByKegiatan = async () => {
+      if (!selectedKegiatan) {
+        setListFitur([]); // Kosongkan opsi jika kegiatan di-clear
+        setDetailFitur([{ fitur_id: "", harga_fitur: 0 }]); // Reset baris tabel fitur
+        return;
+      }
 
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+        const kegiatanId = selectedKegiatan.value;
+
+       
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/fitur/kegiatan/${kegiatanId}`, { headers });
+        if (!res.data || res.data.length === 0) {
+          alert("Tidak ada fitur aktif yang tersedia untuk kegiatan ini.");
+          setListFitur([]);
+        } else {
+          setListFitur(res.data);
+        }
+        
+        // Reset baris input tabel fitur agar bersih kembali demi validitas data relasi
+        setDetailFitur([{ fitur_id: "", harga_fitur: 0 }]);
+      } catch (err) {
+        console.error("Gagal mengambil data fitur via AJAX:", err);
+      }
+    };
+
+    fetchFiturByKegiatan();
+  }, [selectedKegiatan]);
+
+  // Dropdown opsi fitur langsung menggunakan listFitur dari AJAX tanpa perlu filter manual di frontend
   const dropdownOptions: SelectOption[] = listFitur.map((f) => ({
     value: String(f.id),
     label: f.nama_fitur,
   }));
+
   const dropdownTemplateOptions: SelectOptionTemplate[] = listTemplate.map((f) => ({
     value: String(f.code_template),
     label: f.nama_code_template,
@@ -88,8 +142,9 @@ export default function PaketAddForm() {
     updated.splice(index, 1);
     setDetailFitur(updated);
   };
- const addRowTemplateDetail = () => {
-    setDetailTemplate([...detailTemplate, { code_template: "", nama_template:"" }]);
+
+  const addRowTemplateDetail = () => {
+    setDetailTemplate([...detailTemplate, { code_template: "", nama_template: "" }]);
   };
 
   const removeRowTemplateDetail = (index: number) => {
@@ -97,6 +152,7 @@ export default function PaketAddForm() {
     updated.splice(index, 1);
     setDetailTemplate(updated);
   };
+
   const handleFiturChange = async (index: number, selectedOption: SelectOption | null) => {
     const updated = [...detailFitur];
     
@@ -108,7 +164,6 @@ export default function PaketAddForm() {
     }
 
     const fiturId = selectedOption.value;
-
     const isDuplicate = detailFitur.some((row, i) => i !== index && row.fitur_id === fiturId);
     if (isDuplicate) {
       alert("Fitur ini sudah dipilih di baris lain. Silakan pilih fitur yang berbeda.");
@@ -123,40 +178,40 @@ export default function PaketAddForm() {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      updated[index].harga_fitur = res.data.harga || res.data.harga_fitur || 0; 
+      updated[index].harga_fitur = res.data.harga_fitur || 0; 
       setDetailFitur(updated);
     } catch (err) {
-      console.error("Gagal memuat detail harga fitur", err);
+      console.error("Gagal memuat detail harga fitur:", err);
     }
   };
+
   const handleTemplateChange = async (index: number, selectedOption: SelectOptionTemplate | null) => {
-      const updated = [...detailTemplate];
-      
-      if (!selectedOption) {
-        updated[index].code_template = "";
-        updated[index].nama_template = "";
-
-        setDetailTemplate(updated);
-        return;
-      }
-
-      const codeTemplate = selectedOption.value;
-      const namaTemplate = selectedOption.label;
-
-      const isDuplicate = detailTemplate.some((row, i) => i !== index && row.code_template === codeTemplate);
-      if (isDuplicate) {
-        alert("Template ini sudah dipilih di baris lain. Silakan pilih Template yang berbeda.");
-        return; 
-      }
-
-      updated[index].code_template = codeTemplate;
-      updated[index].nama_template = namaTemplate;
+    const updated = [...detailTemplate];
+    
+    if (!selectedOption) {
+      updated[index].code_template = "";
+      updated[index].nama_template = "";
       setDetailTemplate(updated);
+      return;
+    }
 
-      
+    const codeTemplate = selectedOption.value;
+    const namaTemplate = selectedOption.label;
+
+    const isDuplicate = detailTemplate.some((row, i) => i !== index && row.code_template === codeTemplate);
+    if (isDuplicate) {
+      alert("Template ini sudah dipilih di baris lain. Silakan pilih Template yang berbeda.");
+      return; 
+    }
+
+    updated[index].code_template = codeTemplate;
+    updated[index].nama_template = namaTemplate;
+    setDetailTemplate(updated);
   };
+
   const handleSubmit = async () => {
     if (confirm("Apakah kamu yakin ingin menambah data paket ini?")) {
+      if (!selectedKegiatan) return alert("Silakan pilih Kegiatan terlebih dahulu");
       if (!namaPaket.trim()) return alert("Nama paket wajib diisi");
       if (!deskripsiPaket.trim()) return alert("Deskripsi paket wajib diisi");
       
@@ -171,6 +226,7 @@ export default function PaketAddForm() {
         await axios.post(
           `${import.meta.env.VITE_API_URL}/api/paket`,
           {
+            kegiatan_id: Number(selectedKegiatan.value), // Mengirim ID kegiatan utama paket
             namaPaket: namaPaket,     
             deskripsiPaket: deskripsiPaket,
             hargaPaket: totalHargaPaket,
@@ -197,6 +253,22 @@ export default function PaketAddForm() {
   return (
     <ComponentCard title="Data Paket">
       <div className="space-y-6">
+        
+        {/* Input Dropdown Kegiatan Utama */}
+        <div style={{ overflow: "visible" }}>
+          <Label htmlFor="kegiatan">Kegiatan Utama Paket</Label>
+          <Select
+            options={listKegiatan}
+            placeholder="Pilih Kegiatan Terlebih Dahulu..."
+            isSearchable={true}
+            isClearable={true}
+            value={selectedKegiatan}
+            onChange={(selected) => setSelectedKegiatan(selected)}
+            className="text-sm"
+          />
+        </div>
+
+        {/* Input Nama & Output Harga Paket */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="namaPaket">Nama Paket</Label>
@@ -204,7 +276,8 @@ export default function PaketAddForm() {
               type="text"
               value={namaPaket}
               onChange={(e) => setNamaPaket(e.target.value)}
-              placeholder="Masukan Nama Paket"
+              placeholder="Masukkan Nama Paket"
+              disabled={!selectedKegiatan} 
             />
           </div>
           <div>
@@ -223,13 +296,15 @@ export default function PaketAddForm() {
           />
         </div>
 
+        {/* --- Bagian Tabel Detail Fitur --- */}
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Detail Fitur Paket</h3>
             <button
               type="button"
+              disabled={!selectedKegiatan}
               onClick={addRowDetail}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-40"
             >
               + Tambah Fitur
             </button>
@@ -248,10 +323,11 @@ export default function PaketAddForm() {
                 <tr key={index}>
                   <td className="p-3" style={{ overflow: "visible" }}>
                     <Select
-                      options={dropdownOptions}
-                      placeholder="Cari & Pilih Fitur..."
+                      options={dropdownOptions} // Otomatis bersih ter-filter dari response AJAX
+                      placeholder={selectedKegiatan ? "Cari & Pilih Fitur..." : "Silakan pilih kegiatan utama di atas"}
                       isSearchable={true}
                       isClearable={true}
+                      isDisabled={!selectedKegiatan}
                       value={dropdownOptions.find(opt => opt.value === row.fitur_id) || null}
                       onChange={(selected) => handleFiturChange(index, selected)}
                       className="text-sm"
@@ -276,7 +352,8 @@ export default function PaketAddForm() {
           </table>
         </div>
        
-         <div className="mt-8">
+        {/* --- Bagian Tabel Detail Template --- */}
+        <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Detail Template Paket</h3>
             <button
@@ -309,7 +386,6 @@ export default function PaketAddForm() {
                       className="text-sm"
                     />
                   </td>
-                 
                   <td className="p-3 text-center">
                     <button
                       type="button"
@@ -335,14 +411,13 @@ export default function PaketAddForm() {
         >
           Simpan Paket
         </button>
-        <a href="/paket">
-          <button
-            type="button"
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-          >
-            Kembali
-          </button>
-        </a>
+        <button
+          type="button"
+          onClick={() => navigate("/paket")}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+        >
+          Kembali
+        </button>
       </div>
     </ComponentCard>
   );

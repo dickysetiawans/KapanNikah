@@ -3,6 +3,7 @@ CREATE TABLE paket (
     name_paket VARCHAR(100) NOT NULL,
     harga_paket numeric NOT NULL,
     deskripsi_paket text NOT NULL,
+    kegiatan_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

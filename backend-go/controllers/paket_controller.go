@@ -66,6 +66,7 @@ func CreatePaket(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"message": "Deskripsi paket harus antara 10 - 5000 karakter"})
         return
     }
+   
     
     if len(input.DetailFitur) == 0 {
         c.JSON(http.StatusBadRequest, gin.H{
@@ -153,6 +154,7 @@ func CreatePaket(c *gin.Context) {
         NamaPaket:      namaPaket,
         HargaPaket:     totalHarga, 
         DeskripsiPaket: deskripsiPaket,
+        KegiatanId: input.KegiatanId,
     }
 
     if err := tx.Create(&paket).Error; err != nil {
@@ -236,7 +238,7 @@ func UpdatePaket(c *gin.Context) {
         return
     }
 
-    // 1. VALIDASI DETAIL FITUR
+    
     fiturMap := make(map[uint]bool)
     var incomingFiturIDs []uint
     for index, item := range input.DetailFitur {
@@ -256,7 +258,6 @@ func UpdatePaket(c *gin.Context) {
         incomingFiturIDs = append(incomingFiturIDs, item.FiturID)
     }
 
-    // 2. VALIDASI DETAIL TEMPLATE (Baru ditambahkan)
     templateMap := make(map[string]bool)
     var incomingTemplateCodes []string
     for index, item := range input.DetailTemplate {
@@ -289,7 +290,7 @@ func UpdatePaket(c *gin.Context) {
         }
     }()
 
-    // 3. PROSES VERIFIKASI HARGA & DATA FITUR MASTER
+    
     var totalHarga float64 = 0
     type DetailValidData struct {
         FiturID    uint
@@ -317,8 +318,6 @@ func UpdatePaket(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"message": "Total harga paket tidak valid"})
         return
     }
-
-    // 4. SINKRONISASI TABEL FITUR DETAIL (Hapus item yang dikeluarkan)
     err := tx.Where("paket_id = ? AND fitur_id NOT IN ?", paket.ID, incomingFiturIDs).
         Delete(&models.PaketDetailFitur{}).Error
     if err != nil {
@@ -326,8 +325,6 @@ func UpdatePaket(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyelaraskan detail lama"})
         return
     }
-
-    // Upsert Fitur Detail
     for _, detail := range verifiedDetails {
         var existingDetail models.PaketDetailFitur
         errFind := tx.Where("paket_id = ? AND fitur_id = ?", paket.ID, detail.FiturID).First(&existingDetail).Error
@@ -357,8 +354,6 @@ func UpdatePaket(c *gin.Context) {
         }
     }
 
-    // 5. SINKRONISASI TABEL TEMPLATE DETAIL (Baru ditambahkan)
-    // Langkah A: Hapus template lama dari database yang tidak dikirim lagi oleh frontend
     var incomingTemplateIDs []uint
     for _, item := range input.DetailTemplate {
         if item.ID > 0 {
@@ -366,7 +361,6 @@ func UpdatePaket(c *gin.Context) {
         }
     }
 
-    // Langkah B: Upsert data template baru/modifikasi
     queryTemplateDel := tx.Where("paket_id = ?", paket.ID)
     if len(incomingTemplateIDs) > 0 {
         queryTemplateDel = queryTemplateDel.Where("id NOT IN ?", incomingTemplateIDs)
@@ -417,6 +411,7 @@ func UpdatePaket(c *gin.Context) {
     paket.NamaPaket = namaPaket
     paket.HargaPaket = totalHarga
     paket.DeskripsiPaket = deskripsiPaket
+    paket.KegiatanId= input.KegiatanId
 
     if err := tx.Save(&paket).Error; err != nil {
         tx.Rollback()
@@ -546,4 +541,29 @@ func GetDetailTemplateByPaketID(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, details)
+}
+
+func GetPaketByKegiatanID(c *gin.Context) {
+    kegiatanID := c.Param("id")
+    var pakets []models.Paket
+
+    err := config.DB.Select("id", "nama_paket", "harga_paket", "kegiatan_id").
+        Where("kegiatan_id = ?", kegiatanID).
+        Order("id desc").
+        Find(&pakets).Error
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Gagal mengambil data paket berdasarkan kegiatan: " + err.Error(),
+        })
+        return
+    }
+
+    
+    if len(pakets) == 0 {
+        c.JSON(http.StatusOK, []models.Paket{})
+        return
+    }
+
+    c.JSON(http.StatusOK, pakets)
 }

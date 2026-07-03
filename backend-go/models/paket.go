@@ -8,6 +8,7 @@ type Paket struct {
 	HargaPaket float64 `json:"harga_paket"`
 
 	DeskripsiPaket string `json:"deskripsi_paket" gorm:"type:text"`
+	KegiatanId uint `json:"kegiatan_id"`
 }
 
 func (Paket) TableName() string {

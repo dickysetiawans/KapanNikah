@@ -219,10 +219,38 @@ func UpdateFitur(c *gin.Context) {
 }
 
 func GetFiturByIDAndIsActive(c *gin.Context) {
-
     var kegiatans []models.Fitur
 
-    config.DB.Select("id","nama_fitur", "harga_fitur", "is_active", "code_fitur").Where("is_active = ?", true).Order("id desc").Find(&kegiatans)
+    
+    err := config.DB.Where("is_active = ?", true).Order("id desc").Find(&kegiatans).Error
+
+    if err != nil {
+        c.JSON(500, gin.H{"message": "Gagal mengambil data fitur aktif"})
+        return
+    }
 
     c.JSON(200, kegiatans)
+}
+
+func GetFiturByKegiatanID(c *gin.Context) {
+    kegiatanID := c.Param("id")
+    var fiturs []models.Fitur
+
+    // Cari fitur yang is_active = true DAN kegiatan_id cocok dengan parameter URL
+    err := config.DB.Where("is_active = ? AND kegiatan_id = ?", true, kegiatanID).
+        Order("id desc").
+        Find(&fiturs).Error
+
+    if err != nil {
+        c.JSON(500, gin.H{"message": "Gagal mengambil data fitur berdasarkan kegiatan"})
+        return
+    }
+
+    // Jika data kosong, pastikan mengembalikan array kosong [], bukan null
+    if len(fiturs) == 0 {
+        c.JSON(200, []models.Fitur{})
+        return
+    }
+
+    c.JSON(200, fiturs)
 }

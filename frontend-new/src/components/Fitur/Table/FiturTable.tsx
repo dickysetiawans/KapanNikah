@@ -11,9 +11,9 @@ import {
   TableRow,
 } from "../../ui/table";
 
-// 1. Perbaiki tipe data interface (Gunakan number, sesuaikan dengan properti dari API)
+
 interface Fiturs {
-  ID: number;
+  id: number;
   nama_fitur: string;
   code_fitur: string;
   harga_fitur: number;
@@ -130,7 +130,7 @@ export default function FiturTable() {
 
               <TableBody>
                 {currentItems.map((Fitur) => (
-                  <TableRow key={Fitur.ID}>
+                  <TableRow key={Fitur.id}>
                     <TableCell className="px-4 py-3 text-gray-600 text-start text-theme-sm">
                       {Fitur.nama_fitur}
                     </TableCell>

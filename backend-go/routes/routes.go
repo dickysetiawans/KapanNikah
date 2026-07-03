@@ -63,6 +63,7 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/customers/:id", controllers.GetCustomerByID)
 		protected.PUT("/customers/:id",limiterMiddleware, controllers.UpdateCustomer)
 		protected.POST("/customers/sendMessage/:id", limiterMiddleware, controllers.SendPasswordToEmailCustomer)
+		protected.GET("/customers/active", controllers.GetCustomerActive)
 
 
 		protected.GET("/admins", controllers.GetAdmin)
@@ -82,5 +83,18 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/fitur/:id", controllers.GetFiturByID)
 		protected.PUT("/fitur/:id", limiterMiddleware, controllers.UpdateFitur)
 		protected.GET("/fitur/aktif", controllers.GetFiturByIDAndIsActive)
+		protected.GET("/fitur/kegiatan/:id", controllers.GetFiturByKegiatanID)
+
+		// Acara
+		protected.GET("/acara", controllers.GetAcara)
+		protected.POST("/acara", limiterMiddleware, controllers.CreateAcara)
+		protected.GET("/acara/:id", controllers.GetAcaraByID)
+		protected.PUT("/acara/:id", limiterMiddleware, controllers.UpdateAcara)
+
+		protected.GET("/paket/kegiatan/:id", controllers.GetPaketByKegiatanID)
+		// protected.POST("/acara", limiterMiddleware, controllers.CreateAcara)
+		// protected.GET("/acara/:id", controllers.GetAcaraByID)
+		// protected.PUT("/acara/:id", limiterMiddleware, controllers.UpdateAcara)
+
 	}
 }

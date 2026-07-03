@@ -3,7 +3,7 @@ import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import UserProfiles from "./pages/UserProfiles";
 import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
+import Images from "./pages/UiElements/Images"; 
 import Alerts from "./pages/UiElements/Alerts";
 import Badges from "./pages/UiElements/Badges";
 import Avatars from "./pages/UiElements/Avatars";
@@ -104,6 +104,12 @@ import Fitur from "./pages/Fitur/Fitur";
 import AddFitur from "./pages/Fitur/AddFitur";
 import ViewFitur from "./pages/Fitur/ViewFitur";
 import EditFitur from "./pages/Fitur/EditFitur";
+
+// acara
+import Acara from "./pages/Acara/Acara";
+import AddAcara from "./pages/Acara/AddAcara";
+import ViewAcara from "./pages/Acara/ViewAcara";
+import EditAcara from "./pages/Acara/EditAcara";
 
 export default function App() {
   return (
@@ -242,6 +248,32 @@ export default function App() {
              <Route path="/fitur/edit/:id" element={
                 <RoleRoute roles={[1]}>
                   <EditFitur />
+                </RoleRoute>
+              }
+            />
+
+            {/* Acara */}
+            <Route path="/acara" element={
+                <RoleRoute roles={[1]}>
+                  <Acara />
+                </RoleRoute>
+              }
+            />
+            <Route path="/acara/tambah" element={
+                <RoleRoute roles={[1]}>
+                  <AddAcara />
+                </RoleRoute>
+              }
+            />
+            <Route path="/acara/view/:id" element={
+                <RoleRoute roles={[1]}>
+                  <ViewAcara />
+                </RoleRoute>
+              }
+            />
+            <Route path="/acara/edit/:id" element={
+                <RoleRoute roles={[1]}>
+                  <EditAcara />
                 </RoleRoute>
               }
             />

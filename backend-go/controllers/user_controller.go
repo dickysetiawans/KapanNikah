@@ -687,3 +687,19 @@ func UpdateAdmin(c *gin.Context) {
     })
 	
 }
+
+
+func GetCustomerActive(c *gin.Context) {
+	var users []models.User
+
+	err := config.DB.Where("role_id = ? and is_active = ? ", 2, true).Order("id desc").Find(&users).Error
+
+	if err != nil {
+		c.JSON(500, gin.H{
+			"message": "Failed get customers",
+		})
+		return
+	}
+
+	c.JSON(200, users)
+}

@@ -8,7 +8,7 @@ import { AppWrapper } from "./components/common/PageMeta.tsx";
 import { ThemeProvider } from "./context/ThemeContext.tsx";
 import { AuthProvider } from "./context/AuthContext.tsx";
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  // <StrictMode>
     <ThemeProvider>
       <AuthProvider>
         <AppWrapper>
@@ -16,5 +16,5 @@ createRoot(document.getElementById("root")!).render(
         </AppWrapper>
       </AuthProvider>
     </ThemeProvider>
-  </StrictMode>,
+  // </StrictMode>,
 );
