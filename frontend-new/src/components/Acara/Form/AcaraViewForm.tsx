@@ -27,12 +27,37 @@ interface OptionType {
   label: string;
 }
 
+interface PengantinData {
+  nama_pengantin_pria?: string;
+  nama_pengantin_wanita?: string;
+}
+
+interface OrangTuaPengantinData {
+  nama_ayah_pengantin_pria?: string;
+  nama_ibu_pengantin_pria?: string;
+  nama_ayah_pengantin_wanita?: string;
+  nama_ibu_pengantin_wanita?: string;
+}
+
+interface LoveStoryData {
+  kategori: string;
+  tanggal: string;
+  deskripsi: string;
+}
+
 function toDatetimeLocal(isoString: string): string {
   if (!isoString) return "";
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toReadableDate(isoString: string): string {
+  if (!isoString) return "-";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function MapController({ center }: { center: [number, number] }) {
@@ -81,7 +106,7 @@ function MapPlugins() {
   return null;
 }
 
-export default function AcaraDetailForm() {
+export default function AcaraViewForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -97,6 +122,11 @@ export default function AcaraDetailForm() {
   const [latitude, setLatitude] = useState("-6.175392");
   const [longitude, setLongitude] = useState("106.827153");
   const [mapCenter, setMapCenter] = useState<[number, number]>([-6.175392, 106.827153]);
+
+  // --- Data pengantin & orang tua pengantin, cuma ada kalau backend ngirim (paket-nya punya fitur itu) ---
+  const [pengantin, setPengantin] = useState<PengantinData | null>(null);
+  const [orangTuaPengantin, setOrangTuaPengantin] = useState<OrangTuaPengantinData | null>(null);
+  const [loveStory, setLoveStory] = useState<LoveStoryData[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -133,6 +163,12 @@ export default function AcaraDetailForm() {
         setJumlahTamu(acara.jumlah_tamu != null ? String(acara.jumlah_tamu) : "");
         setTanggalMulai(toDatetimeLocal(acara.tanggal_mulai));
         setTanggalSelesai(toDatetimeLocal(acara.tanggal_selesai));
+
+        // Cukup cek ada atau enggak di response -> gak perlu cek fitur paket lagi di sini,
+        // backend udah nentuin itu pas create (field ini cuma dikirim kalau memang ada datanya).
+        setPengantin(acara.pengantin || null);
+        setOrangTuaPengantin(acara.orang_tua_pengantin || null);
+        setLoveStory(Array.isArray(acara.love_story) ? acara.love_story : []);
 
         const lat = Number(acara.latitude);
         const lng = Number(acara.longitude);
@@ -188,7 +224,6 @@ export default function AcaraDetailForm() {
           setSelectedPaket(match || null);
           setInitializing(false);
         } else if (!initializing) {
-          // Kegiatan diganti manual oleh user -> paket lama otomatis gak relevan lagi
           setSelectedPaket(null);
         }
       } catch (err) {
@@ -242,8 +277,6 @@ export default function AcaraDetailForm() {
             <Input type="datetime-local" value={tanggalSelesai} readOnly />
           </div>
         </div>
-
-        
         <div className="space-y-2">
           <Label>Lokasi Peta Acara</Label>
           <p className="text-xs text-gray-400">Titik lokasi tidak dapat diubah di sini. Kamu tetap bisa mencari tempat atau mengganti tampilan peta (Satelit/Normal) di pojok kiri atas.</p>
@@ -278,7 +311,75 @@ export default function AcaraDetailForm() {
           <input type="hidden" name="latitude" value={latitude} />
           <input type="hidden" name="longitude" value={longitude} />
         </div>
+        {pengantin && (
+          <div>
+            {/* Section header gelap */}
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+             Data Pengantin
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="namaPengantinPria">Nama Pengantin Pria</Label>
+                  <Input type="text" value={pengantin.nama_pengantin_pria || "-"} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="namaPengantinWanita">Nama Pengantin Wanita</Label>
+                  <Input type="text" value={pengantin.nama_pengantin_wanita || "-"} readOnly />
+                </div>
+              </div>
+            </div>
+          </div>          
+        )}
 
+        {orangTuaPengantin && (
+          <div>
+            {/* Section header gelap */}
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+             Data Orang Tua Pengantin
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="namaAyahPria">Nama Ayah Pengantin Pria</Label>
+                  <Input type="text" value={orangTuaPengantin.nama_ayah_pengantin_pria || "-"} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="namaIbuPria">Nama Ibu Pengantin Pria</Label>
+                  <Input type="text" value={orangTuaPengantin.nama_ibu_pengantin_pria || "-"} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="namaAyahWanita">Nama Ayah Pengantin Wanita</Label>
+                  <Input type="text" value={orangTuaPengantin.nama_ayah_pengantin_wanita || "-"} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="namaIbuWanita">Nama Ibu Pengantin Wanita</Label>
+                  <Input type="text" value={orangTuaPengantin.nama_ibu_pengantin_wanita || "-"} readOnly />
+                </div>
+              </div>
+            </div>
+          </div> 
+          
+        )}
+
+        {loveStory.length > 0 && (
+          <div>
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+              Love Story
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-3 overflow-y-auto max-h-[300px]">
+              {loveStory.map((story, idx) => (
+                <div key={idx} className="border border-gray-200 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-semibold text-sm text-gray-700">{story.kategori}</span>
+                    <span className="text-xs text-gray-400">{toReadableDate(story.tanggal)}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 whitespace-pre-line">{story.deskripsi}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 flex gap-2">

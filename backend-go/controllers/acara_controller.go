@@ -13,7 +13,8 @@ import (
 	// "wedding-backend/helpers"
 	// "html"
     "net/http"
-    	"wedding-backend/responses"
+    "wedding-backend/responses"
+    "gorm.io/gorm"
 
 
 )
@@ -37,13 +38,13 @@ func GetAcara(c *gin.Context) {
 	c.JSON(http.StatusOK, acaras)
 }
 func CreateAcara(c *gin.Context) {
-	var req requests.CreateAcaraRequest 
+	var req requests.CreateAcaraRequest
  
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Data tidak valid: " + err.Error()})
 		return
-	} 
-
+	}
+ 
 	if !req.TanggalMulai.After(time.Now()) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Waktu mulai tidak boleh sebelum waktu sekarang"})
 		return
@@ -83,7 +84,6 @@ func CreateAcara(c *gin.Context) {
 		return
 	}
  
-	
 	var countBentrok int64
 	config.DB.Model(&models.Acara{}).
 		Where("pelanggan_id = ?", req.PelangganId).
@@ -95,9 +95,27 @@ func CreateAcara(c *gin.Context) {
 		return
 	}
  
+	hasPengantin := !req.Pengantin.IsEmpty()
+	hasOrangTuaPengantin := !req.OrangTuaPengantin.IsEmpty()
+ 
+	// --- Mulai transaksi ---
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memulai transaksi"})
+		return
+	}
+ 
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Terjadi kesalahan tak terduga, perubahan dibatalkan"})
+		}
+	}()
+ 
 	
-	finalSlug, err := resolveUniqueSlug(req.Slug)
+	finalSlug, err := resolveUniqueSlugTx(tx, req.Slug)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memproses slug"})
 		return
 	}
@@ -114,9 +132,8 @@ func CreateAcara(c *gin.Context) {
 		Latitude:       req.Latitude,
 		Longitude:      req.Longitude,
 	}
- 
-
-	if err := config.DB.Create(&acara).Error; err != nil {
+	if err := tx.Create(&acara).Error; err != nil {
+		tx.Rollback()
 		if strings.Contains(err.Error(), "duplicate key") {
 			c.JSON(http.StatusConflict, gin.H{"message": "Slug sudah dipakai, coba lagi"})
 			return
@@ -125,17 +142,71 @@ func CreateAcara(c *gin.Context) {
 		return
 	}
  
+	if hasPengantin {
+		pengantin := models.Pengantin{
+			AcaraId:             acara.ID,
+			NamaPengantinPria:   req.Pengantin.NamaPengantinPria,
+			NamaPengantinWanita: req.Pengantin.NamaPengantinWanita,
+		}
+		if err := tx.Create(&pengantin).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data pengantin"})
+			return
+		}
+	}
+ 
+	if hasOrangTuaPengantin {
+		orangTua := models.OrangTuaPengantin{
+			AcaraId:                 acara.ID,
+			NamaAyahPengantinPria:   req.OrangTuaPengantin.NamaAyahPengantinPria,
+			NamaIbuPengantinPria:    req.OrangTuaPengantin.NamaIbuPengantinPria,
+			NamaAyahPengantinWanita: req.OrangTuaPengantin.NamaAyahPengantinWanita,
+			NamaIbuPengantinWanita:  req.OrangTuaPengantin.NamaIbuPengantinWanita,
+		}
+		if err := tx.Create(&orangTua).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data orang tua pengantin"})
+			return
+		}
+	}
+	if len(req.LoveStory) > 0 {
+		loveStories := make([]models.LoveStory, 0, len(req.LoveStory))
+		for _, ls := range req.LoveStory {
+			tanggal, err := time.Parse("2006-01-02", ls.Tanggal)
+			if err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusBadRequest, gin.H{"message": "Format tanggal love story tidak valid: " + ls.Tanggal})
+				return
+			}
+			loveStories = append(loveStories, models.LoveStory{
+				AcaraId:   acara.ID,
+				Kategori:  ls.Kategori,
+				Tanggal:   tanggal,
+				Deskripsi: ls.Deskripsi,
+			})
+		}
+		if err := tx.Create(&loveStories).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data love story"})
+			return
+		}
+	}
+ 
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan perubahan"})
+		return
+	}
+ 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Acara berhasil disimpan",
-		"data":    acara,
 	})
 }
  
-func resolveUniqueSlug(baseSlug string) (string, error) {
+func resolveUniqueSlugTx(tx *gorm.DB, baseSlug string) (string, error) {
 	slug := baseSlug
 	for i := 1; i <= 50; i++ {
 		var count int64
-		if err := config.DB.Model(&models.Acara{}).Where("slug = ?", slug).Count(&count).Error; err != nil {
+		if err := tx.Model(&models.Acara{}).Where("slug = ?", slug).Count(&count).Error; err != nil {
 			return "", err
 		}
 		if count == 0 {
@@ -145,23 +216,41 @@ func resolveUniqueSlug(baseSlug string) (string, error) {
 	}
 	return "", fmt.Errorf("gagal generate slug unik setelah 50 percobaan")
 }
-
+type AcaraDetailResponse struct {
+	models.Acara
+	Pengantin         *models.Pengantin         `json:"pengantin,omitempty"`
+	OrangTuaPengantin *models.OrangTuaPengantin `json:"orang_tua_pengantin,omitempty"`
+	LoveStory         []models.LoveStory        `json:"love_story,omitempty"`
+}
 func GetAcaraByID(c *gin.Context) {
 	// ini untuk get id nya
 	id := c.Param("id")
 		
-	var Acara models.Acara
+	var acara models.Acara
 
-	err := config.DB.Where("id = ?", id).First(&Acara).Error
-
-	if err != nil {
-		c.JSON(404, gin.H{
-			"message": "Acara tidak ditemukan",
-		})
+	if err := config.DB.Where("id = ?", id).First(&acara).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Acara tidak ditemukan"})
 		return
 	}
 
-	c.JSON(200, Acara)
+	response := AcaraDetailResponse{Acara: acara}
+
+	var pengantin models.Pengantin
+	if err := config.DB.Where("acara_id = ?", acara.ID).First(&pengantin).Error; err == nil {
+		response.Pengantin = &pengantin
+	}
+	
+	var orangTua models.OrangTuaPengantin
+	if err := config.DB.Where("acara_id = ?", acara.ID).First(&orangTua).Error; err == nil {
+		response.OrangTuaPengantin = &orangTua
+	}
+
+ 	var loveStory []models.LoveStory
+	if err := config.DB.Where("acara_id = ?", acara.ID).Order("tanggal asc").Find(&loveStory).Error; err == nil {
+		response.LoveStory = loveStory
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 func UpdateAcara(c *gin.Context) {
 	idParam := c.Param("id")
@@ -232,10 +321,26 @@ func UpdateAcara(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"message": "Pelanggan ini sudah punya acara lain yang waktunya beririsan dengan jadwal yang dipilih"})
 		return
 	}
+	hasPengantin := !req.Pengantin.IsEmpty()
+	hasOrangTuaPengantin := !req.OrangTuaPengantin.IsEmpty()
+
+ 	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memulai transaksi"})
+		return
+	}
  
-	
-	finalSlug, err := resolveUniqueSlugForUpdate(req.Slug, existing.ID)
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Terjadi kesalahan tak terduga, perubahan dibatalkan"})
+		}
+	}()
+
+
+	finalSlug, err := resolveUniqueSlugForUpdate(tx, req.Slug, existing.ID)
 	if err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memproses slug"})
 		return
 	}
@@ -251,17 +356,160 @@ func UpdateAcara(c *gin.Context) {
 	existing.Latitude = req.Latitude
 	existing.Longitude = req.Longitude
  
-	if err := config.DB.Save(&existing).Error; err != nil {
+	if err := tx.Save(&existing).Error; err != nil { 
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data acara"})
+		return
+	}
+
+ 	if hasPengantin {
+ 		if req.Pengantin.PengantinId == 0 {
+			// jika data beluma ada, bakal ngebuat baru
+			pengantin := models.Pengantin{
+				AcaraId:             existing.ID,
+				NamaPengantinPria:   req.Pengantin.NamaPengantinPria,
+				NamaPengantinWanita: req.Pengantin.NamaPengantinWanita,
+			}
+			if err := tx.Create(&pengantin).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data pengantin"})
+				return
+			}
+		}else{
+			var pengantins models.Pengantin
+			if err := config.DB.Where("id = ?", req.Pengantin.PengantinId).First(&pengantins).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusNotFound, gin.H{"message": "Pengantin tidak ditemukan"})
+				return
+			}
+			pengantins.AcaraId = existing.ID
+			pengantins.NamaPengantinPria = req.Pengantin.NamaPengantinPria
+			pengantins.NamaPengantinWanita = req.Pengantin.NamaPengantinWanita
+			if err := tx.Save(&pengantins).Error; err != nil { 
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data pengantin"})
+				return
+			}
+		}
+		
+	}
+ 	// fitur orang tua pengantin
+	if hasOrangTuaPengantin {
+		if req.OrangTuaPengantin.OrangTuaPengantinId == 0 {
+			orangTua := models.OrangTuaPengantin{
+				AcaraId:                 existing.ID,
+				NamaAyahPengantinPria:   req.OrangTuaPengantin.NamaAyahPengantinPria,
+				NamaIbuPengantinPria:    req.OrangTuaPengantin.NamaIbuPengantinPria,
+				NamaAyahPengantinWanita: req.OrangTuaPengantin.NamaAyahPengantinWanita,
+				NamaIbuPengantinWanita:  req.OrangTuaPengantin.NamaIbuPengantinWanita,
+			}
+			if err := tx.Create(&orangTua).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data orang tua pengantin"})
+				return
+			}
+		}else{
+			var orangTuaPengantins models.OrangTuaPengantin
+			if err := config.DB.Where("id = ?", req.OrangTuaPengantin.OrangTuaPengantinId).First(&orangTuaPengantins).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusNotFound, gin.H{"message": "Orang Tua Pengantin tidak ditemukan"})
+				return
+			}
+			orangTuaPengantins.NamaAyahPengantinPria = req.OrangTuaPengantin.NamaAyahPengantinPria
+			orangTuaPengantins.NamaIbuPengantinPria = req.OrangTuaPengantin.NamaIbuPengantinPria
+			orangTuaPengantins.NamaAyahPengantinWanita = req.OrangTuaPengantin.NamaAyahPengantinWanita
+			orangTuaPengantins.NamaIbuPengantinWanita = req.OrangTuaPengantin.NamaIbuPengantinWanita
+			if err := tx.Save(&orangTuaPengantins).Error; err != nil { 
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data orang tua pengantin"})
+				return
+			}
+		}
+		
+	}
+	if len(req.LoveStory) > 0 {
+		var existingLoveStory []models.LoveStory
+		if err := tx.Where("acara_id = ?", existing.ID).Find(&existingLoveStory).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memuat data love story"})
+			return
+		}
+
+		existingIds := make(map[uint]bool)
+		for _, ls := range existingLoveStory {
+			existingIds[ls.ID] = true
+		}
+		submittedIds := make(map[uint]bool)
+
+		for _, item := range req.LoveStory {
+			tanggal, err := time.Parse("2006-01-02", item.Tanggal)
+			if err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusBadRequest, gin.H{"message": "Format tanggal love story tidak valid: " + item.Tanggal})
+				return
+			}
+
+			if item.Id == 0 {
+				// belum ada di DB -> insert baru
+				newStory := models.LoveStory{
+					AcaraId:   existing.ID,
+					Kategori:  item.Kategori,
+					Tanggal:   tanggal,
+					Deskripsi: item.Deskripsi,
+				}
+				if err := tx.Create(&newStory).Error; err != nil {
+					tx.Rollback()
+					c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data love story"})
+					return
+				}
+			} else {
+				// sudah ada -> update, tapi pastikan id-nya memang milik acara ini
+				if !existingIds[item.Id] {
+					tx.Rollback()
+					c.JSON(http.StatusNotFound, gin.H{"message": "Love story tidak ditemukan"})
+					return
+				}
+				submittedIds[item.Id] = true
+				if err := tx.Model(&models.LoveStory{}).
+					Where("id = ? AND acara_id = ?", item.Id, existing.ID).
+					Updates(map[string]interface{}{
+						"kategori":  item.Kategori,
+						"tanggal":   tanggal,
+						"deskripsi": item.Deskripsi,
+					}).Error; err != nil {
+					tx.Rollback()
+					c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data love story"})
+					return
+				}
+			}
+		}
+
+		for _, ls := range existingLoveStory {
+			if !submittedIds[ls.ID] {
+				if err := tx.Delete(&models.LoveStory{}, ls.ID).Error; err != nil {
+					tx.Rollback()
+					c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menghapus love story lama"})
+					return
+				}
+			}
+		}
+	} else {
+		if err := tx.Where("acara_id = ?", existing.ID).Delete(&models.LoveStory{}).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menghapus data love story"})
+			return
+		}
+	}
+ 	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan perubahan"})
 		return
 	}
  
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Acara berhasil diperbarui",
-		"data":    existing,
 	})
 }
-func resolveUniqueSlugForUpdate(baseSlug string, excludeID uint) (string, error) {
+func resolveUniqueSlugForUpdate(tx *gorm.DB, baseSlug string, excludeID uint) (string, error) {
 	slug := baseSlug
 	for i := 1; i <= 50; i++ {
 		var count int64

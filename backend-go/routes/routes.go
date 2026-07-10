@@ -89,7 +89,7 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/acara", controllers.GetAcara)
 		protected.POST("/acara", limiterMiddleware, controllers.CreateAcara)
 		protected.GET("/acara/:id", controllers.GetAcaraByID)
-		protected.PUT("/acara/:id", limiterMiddleware, controllers.UpdateAcara)
+		protected.POST("/acara/update/:id", limiterMiddleware, controllers.UpdateAcara)
 
 		protected.GET("/paket/kegiatan/:id", controllers.GetPaketByKegiatanID)
 		// protected.POST("/acara", limiterMiddleware, controllers.CreateAcara)

@@ -74,9 +74,30 @@ export default function FiturViewForm() {
 	  }
 	}, [id]);
 	const labelFitur = {
-	    [CODE_FITUR.SHOW_BRIDE_NAME]: "MNM - Menampilkan Nama Mempelai",
-	    [CODE_FITUR.SHOW_GALERI]: "MGFM - Menampilkan Galeri Foto mempelai",
-	    [CODE_FITUR.ABSENT_ATTANDANCE]: "FAK - Fitur Absent Kehadiran",
+	  [CODE_FITUR.SHOW_BRIDE_NAME]: "MNM - Menampilkan Nama Mempelai",
+	  [CODE_FITUR.SHOW_PARENT_NAME]: "MNOT - Menampilkan Nama Orang Tua",
+	  [CODE_FITUR.SHOW_EVENT_DATE]: "MTA - Menampilkan Tanggal Acara",
+	  [CODE_FITUR.SHOW_EVENT_LOCATION]: "MLA - Menampilkan Lokasi Acara",
+	  [CODE_FITUR.SHOW_MAP_LOCATION]: "GM - Google Maps",
+	  [CODE_FITUR.SHOW_COUNTDOWN]: "CA - Countdown Acara",
+	  [CODE_FITUR.SHOW_GALLERY]: "MGFM - Menampilkan Galeri Foto Mempelai",
+	  [CODE_FITUR.SHOW_LOVE_STORY]: "LS - Love Story",
+	  [CODE_FITUR.SHOW_EVENT_SCHEDULE]: "JA - Jadwal Acara",
+	  [CODE_FITUR.SHOW_DRESS_CODE]: "DC - Dress Code",
+	  [CODE_FITUR.SHOW_MUSIC]: "BM - Background Music",
+	  [CODE_FITUR.SHOW_LIVE_STREAMING]: "LST - Live Streaming",
+	  [CODE_FITUR.SHOW_RSVP]: "RSVP - Konfirmasi Kehadiran",
+	  [CODE_FITUR.SHOW_ATTENDANCE]: "FAK - Fitur Absensi Kehadiran",
+	  [CODE_FITUR.SHOW_GUEST_BOOK]: "BT - Buku Tamu",
+	  [CODE_FITUR.SHOW_WEDDING_GIFT]: "WG - Wedding Gift",
+	  [CODE_FITUR.SHOW_QR_CHECKIN]: "QRC - QR Check-in",
+	  [CODE_FITUR.SHOW_SEAT_NUMBER]: "NMK - Nomor Meja / Kursi",
+	  [CODE_FITUR.SHOW_INVITATION_TO]: "NTU - Nama Tamu Undangan",
+	  [CODE_FITUR.SHOW_SHARE_BUTTON]: "TS - Tombol Share",
+	  [CODE_FITUR.SHOW_HEALTH_PROTOCOL]: "PK - Protokol Kesehatan",
+	  [CODE_FITUR.SHOW_CONTACT_PERSON]: "CP - Contact Person",
+	  [CODE_FITUR.SHOW_THANK_YOU_NOTE]: "UTK - Ucapan Terima Kasih",
+	  [CODE_FITUR.SHOW_VIDEO]: "VP - Video Prewedding",
 	};
 	if (loading) {
 	    return (

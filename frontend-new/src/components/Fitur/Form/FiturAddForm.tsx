@@ -65,9 +65,33 @@ export default function FiturAddForm() {
 	 	}
 	}
 	const options = [
-		{ value: CODE_FITUR.SHOW_BRIDE_NAME, label:  "MNM - Menampilkan Nama Mempelai" , selected: false},
-		{ value: CODE_FITUR.SHOW_GALERI, label: "MGFM - Menampilkan Galeri Foto mempelai" , selected: false},
-		{ value: CODE_FITUR.ABSENT_ATTANDANCE, label: "FAK - Fitur Absent Kehadiran" , selected: false},
+	  { value: CODE_FITUR.SHOW_BRIDE_NAME, label: "MNM - Menampilkan Nama Mempelai", selected: false },
+	  { value: CODE_FITUR.SHOW_PARENT_NAME, label: "MNOT - Menampilkan Nama Orang Tua", selected: false },
+	  { value: CODE_FITUR.SHOW_EVENT_DATE, label: "MTA - Menampilkan Tanggal Acara", selected: false },
+	  { value: CODE_FITUR.SHOW_EVENT_LOCATION, label: "MLA - Menampilkan Lokasi Acara", selected: false },
+	  { value: CODE_FITUR.SHOW_MAP_LOCATION, label: "GM - Google Maps", selected: false },
+	  { value: CODE_FITUR.SHOW_COUNTDOWN, label: "CA - Countdown Acara", selected: false },
+	  { value: CODE_FITUR.SHOW_GALLERY, label: "MGFM - Menampilkan Galeri Foto Mempelai", selected: false },
+	  { value: CODE_FITUR.SHOW_LOVE_STORY, label: "LS - Love Story", selected: false },
+	  { value: CODE_FITUR.SHOW_EVENT_SCHEDULE, label: "JA - Jadwal Acara", selected: false },
+	  { value: CODE_FITUR.SHOW_DRESS_CODE, label: "DC - Dress Code", selected: false },
+	  { value: CODE_FITUR.SHOW_MUSIC, label: "BM - Background Music", selected: false },
+	  { value: CODE_FITUR.SHOW_VIDEO, label: "VP - Video Prewedding", selected: false },
+	  { value: CODE_FITUR.SHOW_LIVE_STREAMING, label: "LST - Live Streaming", selected: false },
+	  { value: CODE_FITUR.SHOW_RSVP, label: "RSVP - Konfirmasi Kehadiran", selected: false },
+	  { value: CODE_FITUR.SHOW_ATTENDANCE, label: "FAK - Fitur Absensi Kehadiran", selected: false },
+	  { value: CODE_FITUR.SHOW_GUEST_BOOK, label: "BT - Buku Tamu", selected: false },
+	  { value: CODE_FITUR.SHOW_WEDDING_GIFT, label: "WG - Wedding Gift", selected: false },
+	  { value: CODE_FITUR.SHOW_QR_CHECKIN, label: "QRC - QR Check-in", selected: false },
+	  { value: CODE_FITUR.SHOW_SEAT_NUMBER, label: "NMK - Nomor Meja / Kursi", selected: false },
+	  { value: CODE_FITUR.SHOW_INVITATION_TO, label: "NTU - Nama Tamu Undangan", selected: false },
+	  { value: CODE_FITUR.SHOW_SHARE_BUTTON, label: "TS - Tombol Share", selected: false },
+	  { value: CODE_FITUR.SHOW_HEALTH_PROTOCOL, label: "PK - Protokol Kesehatan", selected: false },
+	  { value: CODE_FITUR.SHOW_CONTACT_PERSON, label: "CP - Contact Person", selected: false },
+	  { value: CODE_FITUR.SHOW_THANK_YOU_NOTE, label: "UTK - Ucapan Terima Kasih", selected: false },
+	  { value: CODE_FITUR.SHOW_VIDEO, label: "VP - Video Prewedding", selected: false },
+
+
 	];
 	const fetchKegiatan = async () => {
 	    try {
