@@ -17,6 +17,13 @@ type LoveStoryRequest struct {
 	Tanggal   string `json:"tanggal" binding:"required"`
 	Deskripsi string `json:"deskripsi" binding:"required"`
 }
+type ContactPersonRequest struct {
+	DeskripKontak  string `json:"deskripsi_contact" binding:"required"`
+	NoTelpone   string `json:"no_hanphone" binding:"required"`
+}
+type UcapanTerimakasihRequest struct {
+	Ucapan  string `json:"ucapan" binding:"required"`
+}
 type CreateAcaraRequest struct {
 	NamaAcara      string    `json:"nama_acara" binding:"required"`
 	Slug           string    `json:"slug" binding:"required"`
@@ -31,6 +38,8 @@ type CreateAcaraRequest struct {
 	Pengantin 	   NamaPengantinRequest  `json:"pengantin"`
 	OrangTuaPengantin NamaOrangTuaPengantinRequest `json:"orang_tua_pengantin"`
 	LoveStory         []LoveStoryRequest           `json:"love_story"`
+	ContactPerson ContactPersonRequest  `json:"contact_person"`
+	UcapanTerimakasih UcapanTerimakasihRequest  `json:"ucapan_terimakasih"`
 }
 
 type NamaPengantinUpdateRequest struct {
@@ -39,7 +48,7 @@ type NamaPengantinUpdateRequest struct {
     NamaPengantinWanita string `json:"nama_pengantin_wanita"`
 }
 type NamaOrangTuaPengantinUpdateRequest struct {
-	OrangTuaPengantinId 				uint   `json:"id"`
+	OrangTuaPengantinId 	uint   `json:"id"`
     NamaAyahPengantinPria 	string `json:"nama_ayah_pengantin_pria"`
     NamaIbuPengantinPria 	string `json:"nama_ibu_pengantin_pria"`
     NamaAyahPengantinWanita string `json:"nama_ayah_pengantin_wanita"`
@@ -48,8 +57,17 @@ type NamaOrangTuaPengantinUpdateRequest struct {
 type LoveStoryUpdateRequest struct {
 	Id        uint   `json:"id"`
 	Kategori  string `json:"kategori" binding:"required"`
-	Tanggal   string `json:"tanggal" binding:"required"` // format "2006-01-02"
+	Tanggal   string `json:"tanggal" binding:"required"` 
 	Deskripsi string `json:"deskripsi" binding:"required"`
+}
+type ContactPersonUpdateRequest struct {
+	ContactPersonId 	uint   `json:"id"`
+	DeskripKontak  string `json:"deskripsi_contact" binding:"required"`
+	NoTelpone   string `json:"no_hanphone" binding:"required"`
+}
+type UcapanTerimakasihUpdateRequest struct {
+	UcapanTerimakasihId 	uint   `json:"id"`
+	Ucapan  string `json:"ucapan" binding:"required"`
 }
 type UpdateAcaraRequest struct {
 	NamaAcara      string    `json:"nama_acara" binding:"required"`
@@ -65,4 +83,10 @@ type UpdateAcaraRequest struct {
 	Pengantin 	   NamaPengantinUpdateRequest  `json:"pengantin"`
 	OrangTuaPengantin NamaOrangTuaPengantinUpdateRequest `json:"orang_tua_pengantin"`
 	LoveStory         []LoveStoryUpdateRequest           `json:"love_story"`
+	ContactPerson ContactPersonUpdateRequest  `json:"contact_person"`
+	UcapanTerimakasih UcapanTerimakasihUpdateRequest  `json:"ucapan_terimakasih"`
+}
+
+type GaleriFotoRequest struct {
+	Keterangan string `form:"keterangan"`
 }

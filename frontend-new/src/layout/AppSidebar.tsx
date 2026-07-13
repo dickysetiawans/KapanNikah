@@ -217,8 +217,16 @@ const AppSidebar: React.FC = () => {
 
   // const isActive = (path: string) => location.pathname === path;
   const isActive = useCallback(
-    (path: string) => location.pathname === path,
-    [location.pathname]
+    (path: string) => {
+    // Jika berada di homepage/root, pakai perbandingan persis supaya tidak match ke semua halaman
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    
+    // Mengecek apakah URL sekarang diawali dengan path dari menu
+    return location.pathname.startsWith(path);
+  },
+  [location.pathname]
   );
 
   useEffect(() => {

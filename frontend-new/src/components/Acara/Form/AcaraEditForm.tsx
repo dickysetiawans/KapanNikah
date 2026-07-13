@@ -38,6 +38,16 @@ interface LoveStoryEditItem {
   tanggal: string;
   deskripsi: string;
 }
+interface GaleriData {
+  id: number;
+  url_gambar: string;
+  keterangan: string;
+}
+interface GaleriItem {
+  file: File;
+  preview: string;
+  keterangan: string;
+}
 
 function generateSlug(text: string): string {
   return text
@@ -166,10 +176,25 @@ export default function AcaraEditForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  
   const [initializing, setInitializing] = useState(true);
   const [pendingPaketId, setPendingPaketId] = useState<string | null>(null);
   const [isFirstFiturLoad, setIsFirstFiturLoad] = useState(true);
+
+  // Foto yang sudah tersimpan (read-only, ditampilkan sebagai referensi)
+  const [galeri, setGaleri] = useState<GaleriData[]>([]);
+  // Foto baru yang mau ditambahkan (mirip listGaleri di Add Form)
+  const [listGaleriBaru, setListGaleriBaru] = useState<GaleriItem[]>([]);
+
+  /* hanya untuk fitur menampilkan contanct person*/
+  const [contactPersonId, setContactPersonId] = useState("");
+  const [deskripsiContact, setDeskripsiContact] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  /* stop */
+
+  /* hanya untuk fitur menampilkan ucapan terimakasih*/
+  const [ucapanTerimakasihId, setUcapanTerimakasihId] = useState("");
+  const [ucapanTerimakasih, setUcapanTerimakasih] = useState("");
+  /* stop */
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -210,19 +235,29 @@ export default function AcaraEditForm() {
         setTanggalMulai(toDatetimeLocal(acara.tanggal_mulai));
         setTanggalSelesai(toDatetimeLocal(acara.tanggal_selesai));
 
-        
         if (acara.pengantin) {
-          setPengantinId(acara.pengantin.id);
+          setPengantinId(acara.pengantin.id != null ? String(acara.pengantin.id) : "");
           setNamaPengantinPria(acara.pengantin.nama_pengantin_pria || "");
           setNamaPengantinWanita(acara.pengantin.nama_pengantin_wanita || "");
         }
         if (acara.orang_tua_pengantin) {
-          setOrangTuaPengantinId(acara.orang_tua_pengantin.id);
+          setOrangTuaPengantinId(acara.orang_tua_pengantin.id != null ? String(acara.orang_tua_pengantin.id) : "");
           setNamaAyahPengantinPria(acara.orang_tua_pengantin.nama_ayah_pengantin_pria || "");
           setNamaIbuPengantinPria(acara.orang_tua_pengantin.nama_ibu_pengantin_pria || "");
           setNamaAyahPengantinWanita(acara.orang_tua_pengantin.nama_ayah_pengantin_wanita || "");
           setNamaIbuPengantinWanita(acara.orang_tua_pengantin.nama_ibu_pengantin_wanita || "");
         }
+        if (acara.contact_person) {
+          setContactPersonId(acara.contact_person.id != null ? String(acara.contact_person.id) : "");
+          setDeskripsiContact(acara.contact_person.deskripsi || "");
+          setContactPerson(acara.contact_person.no_hanphone || "");
+          
+        }
+        if (acara.ucapan_terimakasih) {
+          setUcapanTerimakasihId(acara.ucapan_terimakasih.id != null ? String(acara.ucapan_terimakasih.id) : "");
+          setUcapanTerimakasih(acara.ucapan_terimakasih.ucapan || "");          
+        }
+
         if (Array.isArray(acara.love_story) && acara.love_story.length > 0) {
           setListLoveStory(acara.love_story.map((ls: any) => ({
             id: ls.id || ls.ID || 0,
@@ -230,6 +265,15 @@ export default function AcaraEditForm() {
             tanggal: toDateOnly(ls.tanggal),
             deskripsi: ls.deskripsi || "",
           })));
+        }
+        if (Array.isArray(acara.galeri) && acara.galeri.length > 0) {
+          setGaleri(
+            acara.galeri.map((g: any) => ({
+              id: g.id || g.ID,
+              url_gambar: g.url_gambar?.startsWith("http") ? g.url_gambar : `${API}${g.url_gambar}`,
+              keterangan: g.keterangan || "",
+            }))
+          );
         }
 
         const lat = Number(acara.latitude);
@@ -260,6 +304,7 @@ export default function AcaraEditForm() {
 
     if (id) fetchAll();
   }, [id]);
+
   useEffect(() => {
     const fetchPaketByKegiatan = async () => {
       if (!selectedKegiatan) {
@@ -284,8 +329,7 @@ export default function AcaraEditForm() {
           })));
         }
 
-        if (initializing && pendingPaketId) {
-        } else if (!initializing) {
+        if (!initializing && !pendingPaketId) {
           setSelectedPaket(null);
         }
       } catch (err) {
@@ -295,12 +339,14 @@ export default function AcaraEditForm() {
 
     if (!loading) fetchPaketByKegiatan();
   }, [selectedKegiatan, loading]);
+
   useEffect(() => {
     if (initializing && pendingPaketId && listPaket.length > 0) {
       const match = listPaket.find((o) => o.value === pendingPaketId);
       if (match) setSelectedPaket(match);
     }
   }, [listPaket, initializing, pendingPaketId]);
+
   useEffect(() => {
     const fetchFiturByPaket = async () => {
       if (!selectedPaket) {
@@ -334,7 +380,6 @@ export default function AcaraEditForm() {
         }
 
         if (isFirstFiturLoad) {
-         
           setIsFirstFiturLoad(false);
           setInitializing(false);
         } else {
@@ -376,6 +421,51 @@ export default function AcaraEditForm() {
     setListLoveStory(updated);
   };
 
+  // --- Handler foto baru (mirip Add Form) ---
+  const handleGaleriChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    const newItems: GaleriItem[] = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      keterangan: "",
+    }));
+    setListGaleriBaru([...listGaleriBaru, ...newItems]);
+    e.target.value = "";
+  };
+
+  const removeGaleriBaru = (index: number) => {
+    const updated = [...listGaleriBaru];
+    URL.revokeObjectURL(updated[index].preview);
+    updated.splice(index, 1);
+    setListGaleriBaru(updated);
+  };
+
+  const updateKeteranganGaleriBaru = (index: number, value: string) => {
+    const updated = [...listGaleriBaru];
+    updated[index] = { ...updated[index], keterangan: value };
+    setListGaleriBaru(updated);
+  };
+
+  // --- Hapus foto lama yang udah tersimpan ---
+  const [deletingGaleriId, setDeletingGaleriId] = useState<number | null>(null);
+  const handleDeleteGaleriLama = async (galeriId: number, index: number) => {
+    if (!confirm("Hapus foto ini? Tindakan ini tidak bisa dibatalkan.")) return;
+
+    setDeletingGaleriId(galeriId);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/acara/${id}/galeri/${galeriId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGaleri((prev) => prev.filter((_, i) => i !== index));
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Gagal menghapus foto");
+    } finally {
+      setDeletingGaleriId(null);
+    }
+  };
+
   const handleUpdate = async () => {
     if (!namaAcara.trim()) return alert("Nama acara wajib diisi");
     if (!selectedPelanggan) return alert("Silakan pilih Pelanggan");
@@ -389,14 +479,14 @@ export default function AcaraEditForm() {
       if (fitur.code_fitur === CODE_FITUR.SHOW_BRIDE_NAME) {
         if (!namaPengantinPria.trim()) return alert("Nama pengantin pria wajib diisi");
         if (!namaPengantinWanita.trim()) return alert("Nama pengantin wanita wajib diisi");
-        break;
+       
       }
       if (fitur.code_fitur === CODE_FITUR.SHOW_PARENT_NAME) {
         if (!namaAyahPengantinPria.trim()) return alert("Nama ayah pengantin pria wajib diisi");
         if (!namaIbuPengantinPria.trim()) return alert("Nama ibu pengantin pria wajib diisi");
         if (!namaAyahPengantinWanita.trim()) return alert("Nama ayah pengantin wanita wajib diisi");
         if (!namaIbuPengantinWanita.trim()) return alert("Nama ibu pengantin wanita wajib diisi");
-        break;
+       
       }
       if (fitur.code_fitur === CODE_FITUR.SHOW_LOVE_STORY) {
         for (const story of listLoveStory) {
@@ -404,7 +494,22 @@ export default function AcaraEditForm() {
           if (!story.tanggal) return alert("Tanggal cerita cinta wajib diisi");
           if (!story.deskripsi.trim()) return alert("Deskripsi cerita cinta wajib diisi");
         }
-        break;
+       
+      }
+      if (fitur.code_fitur === CODE_FITUR.SHOW_GALLERY) {
+        if (galeri.length === 0 && listGaleriBaru.length === 0) {
+          return alert("Silakan unggah minimal 1 foto untuk galeri");
+        }
+       
+      }
+      if (fitur.code_fitur === CODE_FITUR.SHOW_CONTACT_PERSON) {
+        if (!deskripsiContact.trim()) return alert("Deskripsi kontak wajib diisi");
+        if (!contactPerson.trim()) return alert("Nomor Kontak wajib diisi");
+       
+      }
+      if (fitur.code_fitur === CODE_FITUR.SHOW_THANK_YOU_NOTE) {
+        if (!ucapanTerimakasih.trim()) return alert("Ucapan terimakasih wajib diisi");
+       
       }
     }
 
@@ -413,8 +518,9 @@ export default function AcaraEditForm() {
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
+      const API = import.meta.env.VITE_API_URL;
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/acara/update/${id}`,
+        `${API}/api/acara/update/${id}`,
         {
           nama_acara: namaAcara,
           slug: generateSlug(namaAcara),
@@ -427,16 +533,25 @@ export default function AcaraEditForm() {
           latitude: Number(latitude),
           longitude: Number(longitude),
           pengantin: {
-            id:Number(pengantinId),
+            id: pengantinId ? Number(pengantinId) : 0,
             nama_pengantin_pria: namaPengantinPria,
             nama_pengantin_wanita: namaPengantinWanita,
           },
           orang_tua_pengantin: {
-            id:Number(orangTuaPengantinId),
+            id: orangTuaPengantinId ? Number(orangTuaPengantinId) : 0,
             nama_ayah_pengantin_pria: namaAyahPengantinPria,
             nama_ibu_pengantin_pria: namaIbuPengantinPria,
             nama_ayah_pengantin_wanita: namaAyahPengantinWanita,
             nama_ibu_pengantin_wanita: namaIbuPengantinWanita,
+          },
+          contact_person: {
+            id: contactPersonId ? Number(contactPersonId) : 0,
+            deskripsi_contact: deskripsiContact,
+            no_hanphone: contactPerson,  
+          },
+          ucapan_terimakasih: {
+            id: ucapanTerimakasihId ? Number(ucapanTerimakasihId) : 0,
+            ucapan: ucapanTerimakasih,
           },
           love_story: listFitur.some((f) => f.code_fitur === CODE_FITUR.SHOW_LOVE_STORY)
             ? listLoveStory.map((s) => ({
@@ -449,6 +564,29 @@ export default function AcaraEditForm() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      // Upload foto baru (kalau ada), setelah update utama berhasil
+      if (
+        listFitur.some((f) => f.code_fitur === CODE_FITUR.SHOW_GALLERY) &&
+        listGaleriBaru.length > 0
+      ) {
+        try {
+          const formDataGaleri = new FormData();
+          listGaleriBaru.forEach((item) => {
+            formDataGaleri.append("foto", item.file);
+            formDataGaleri.append("keterangan", item.keterangan);
+          });
+
+          await axios.post(`${API}/api/acara/${id}/galeri`, formDataGaleri, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch (galeriErr: any) {
+          console.error("Gagal upload foto galeri:", galeriErr);
+          alert(galeriErr.response?.data?.message || "Acara berhasil diperbarui, tapi foto galeri baru gagal diunggah. Silakan coba tambahkan lagi.");
+          navigate("/acara");
+          return;
+        }
+      }
 
       alert("Acara berhasil diperbarui");
       navigate("/acara");
@@ -519,7 +657,6 @@ export default function AcaraEditForm() {
           </div>
         </div>
 
-        {/* --- PETA GEOLOKASI --- */}
         <div className="space-y-2">
           <Label>Lokasi Peta Acara</Label>
           <i style={{ color: "red" }}>*Silahkan geser titik lokasi kalau perlu diubah</i>
@@ -669,6 +806,127 @@ export default function AcaraEditForm() {
                       >
                         + Tambah Cerita
                       </button>
+                    </div>
+                  </div>
+                )}
+                {fitur.code_fitur === CODE_FITUR.SHOW_GALLERY && (
+                  <div>
+                    <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                      Fitur "{fitur.nama_fitur}"
+                    </div>
+                    <div className="border border-gray-200 rounded-b-lg p-4 space-y-4">
+                      {galeri.length > 0 && (
+                        <div className="space-y-2">
+                          <Label>Foto yang Sudah Ada</Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto max-h-[300px] pr-1">
+                            {galeri.map((itemGaleri, idx) => (
+                              <div key={itemGaleri.id} className="border border-gray-200 rounded-lg p-2 space-y-1">
+                                <img
+                                  src={itemGaleri.url_gambar}
+                                  alt={itemGaleri.keterangan || `Foto galeri ${idx + 1}`}
+                                  className="w-full h-32 object-cover rounded-md"
+                                />
+                                {itemGaleri.keterangan && (
+                                  <p className="text-xs text-gray-500 text-center">{itemGaleri.keterangan}</p>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={deletingGaleriId === itemGaleri.id}
+                                  onClick={() => handleDeleteGaleriLama(itemGaleri.id, idx)}
+                                  className="w-full text-red-600 text-xs hover:underline disabled:opacity-50"
+                                >
+                                  {deletingGaleriId === itemGaleri.id ? "Menghapus..." : "Hapus Foto"}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label htmlFor="galeriFotoBaru">Tambah Foto Baru</Label>
+                        <input
+                          id="galeriFotoBaru"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleGaleriChange}
+                          className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#138767] file:text-white file:text-sm hover:file:bg-[#0f6d53] file:cursor-pointer cursor-pointer"
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Bisa pilih beberapa foto sekaligus. Format JPG/PNG.</p>
+                      </div>
+
+                      {listGaleriBaru.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto max-h-[400px] pr-1">
+                          {listGaleriBaru.map((item, idx) => (
+                            <div key={idx} className="border border-gray-200 rounded-lg p-2 space-y-2 relative">
+                              <img
+                                src={item.preview}
+                                alt={`Preview galeri baru ${idx + 1}`}
+                                className="w-full h-32 object-cover rounded-md"
+                              />
+                              <Input
+                                type="text"
+                                value={item.keterangan}
+                                onChange={(e) => updateKeteranganGaleriBaru(idx, e.target.value)}
+                                placeholder="Keterangan (opsional)"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeGaleriBaru(idx)}
+                                className="w-full text-red-600 text-xs hover:underline"
+                              >
+                                Hapus Foto
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {fitur.code_fitur === CODE_FITUR.SHOW_CONTACT_PERSON && (
+                  <div>
+                    <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                      Fitur "{fitur.nama_fitur}"
+                    </div>
+                    <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+                     <div className="grid grid-cols-2 gap-6">
+                       
+                        <div>
+                          <Label htmlFor="contactPerson">Nomor Kontak</Label>
+                          <Input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="Masukkan Nomor Kontak" />
+                        </div>
+                        <div>
+                          <Label htmlFor="deskripsiContact">Deskripsi Kontak</Label>
+                          <textarea
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-600"
+                            rows={3}
+                            value={deskripsiContact}
+                            onChange={(e) => setDeskripsiContact(e.target.value)} 
+                            placeholder="Masukkan deskripsi kontak, example: jika ada yg belum paham bisa tanyakan ke no ini"
+                          />
+                        </div>
+                     </div>
+                    </div>
+                  </div>
+                )}
+                {fitur.code_fitur === CODE_FITUR.SHOW_THANK_YOU_NOTE && (
+                  <div>
+                    <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                      Fitur "{fitur.nama_fitur}"
+                    </div>
+                    <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+                      <div>
+                        <Label htmlFor="ucapanTerimakasih">Ucapan Terimaksih</Label>
+                        <textarea
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-600"
+                          rows={3}
+                          value={ucapanTerimakasih}
+                          onChange={(e) => setUcapanTerimakasih(e.target.value)} 
+                          placeholder="Masukan Ucapan terimakasih......."
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

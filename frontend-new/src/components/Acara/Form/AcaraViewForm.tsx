@@ -44,7 +44,17 @@ interface LoveStoryData {
   tanggal: string;
   deskripsi: string;
 }
-
+interface GaleriData {
+  url_gambar: string;
+  keterangan: string;
+}
+interface ContactPersonData {
+  deskripsi?: string;
+  no_hanphone?: string;
+}
+interface UcapanTerimakasihData {
+  ucapan?: string;
+}
 function toDatetimeLocal(isoString: string): string {
   if (!isoString) return "";
   const d = new Date(isoString);
@@ -123,17 +133,19 @@ export default function AcaraViewForm() {
   const [longitude, setLongitude] = useState("106.827153");
   const [mapCenter, setMapCenter] = useState<[number, number]>([-6.175392, 106.827153]);
 
-  // --- Data pengantin & orang tua pengantin, cuma ada kalau backend ngirim (paket-nya punya fitur itu) ---
+  
   const [pengantin, setPengantin] = useState<PengantinData | null>(null);
   const [orangTuaPengantin, setOrangTuaPengantin] = useState<OrangTuaPengantinData | null>(null);
   const [loveStory, setLoveStory] = useState<LoveStoryData[]>([]);
+  const [galeri, setGaleri] = useState<GaleriData[]>([]);
 
   const [loading, setLoading] = useState(true);
 
   const [initializing, setInitializing] = useState(true);
   const [pendingPaketId, setPendingPaketId] = useState<string | null>(null);
 
- 
+ const [contactPerson, setContactPerson] = useState<ContactPersonData | null>(null);
+ const [UcapanTerimakasih, setUcapanTerimakasih] = useState<UcapanTerimakasihData | null>(null);
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -163,12 +175,19 @@ export default function AcaraViewForm() {
         setJumlahTamu(acara.jumlah_tamu != null ? String(acara.jumlah_tamu) : "");
         setTanggalMulai(toDatetimeLocal(acara.tanggal_mulai));
         setTanggalSelesai(toDatetimeLocal(acara.tanggal_selesai));
-
-        // Cukup cek ada atau enggak di response -> gak perlu cek fitur paket lagi di sini,
-        // backend udah nentuin itu pas create (field ini cuma dikirim kalau memang ada datanya).
         setPengantin(acara.pengantin || null);
         setOrangTuaPengantin(acara.orang_tua_pengantin || null);
         setLoveStory(Array.isArray(acara.love_story) ? acara.love_story : []);
+        setContactPerson(acara.contact_person || null);
+        setUcapanTerimakasih(acara.ucapan_terimakasih || null);
+        setGaleri(
+          Array.isArray(acara.galeri)
+            ? acara.galeri.map((g: any) => ({
+                url_gambar: g.url_gambar?.startsWith("http") ? g.url_gambar : `${API}${g.url_gambar}`,
+                keterangan: g.keterangan || "",
+              }))
+            : []
+        );
 
         const lat = Number(acara.latitude);
         const lng = Number(acara.longitude);
@@ -361,9 +380,43 @@ export default function AcaraViewForm() {
           </div> 
           
         )}
-
+        {contactPerson && (
+          <div>
+            {/* Section header gelap */}
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+             Data Nomor Kontak
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="no_hanphone">Nomor Kontak</Label>
+                  <Input type="text" value={contactPerson.no_hanphone || "-"} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="deskripsi">Deskripsi Kontak</Label>
+                  <Input type="text" value={contactPerson.deskripsi || "-"} readOnly />
+                </div>
+              </div>
+            </div>
+          </div>          
+        )}
+        {UcapanTerimakasih && (
+          <div>
+            {/* Section header gelap */}
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+             Data Ucapan Terimakasih
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+              <div>
+                  <Label htmlFor="ucapan">Ucapan</Label>
+                  <Input type="text" value={UcapanTerimakasih.ucapan || "-"} readOnly />
+                </div>
+            </div>
+          </div>          
+        )}
         {loveStory.length > 0 && (
           <div>
+            {/* Section header gelap */}
             <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
               Love Story
             </div>
@@ -377,6 +430,30 @@ export default function AcaraViewForm() {
                   <p className="text-sm text-gray-600 whitespace-pre-line">{story.deskripsi}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {galeri.length > 0 && (
+          <div>
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+              Galeri Foto
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto max-h-[400px] pr-1">
+                {galeri.map((item, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-2 space-y-1">
+                    <img
+                      src={item.url_gambar}
+                      alt={item.keterangan || `Foto galeri ${idx + 1}`}
+                      className="w-full h-32 object-cover rounded-md"
+                    />
+                    {item.keterangan && (
+                      <p className="text-xs text-gray-500 text-center">{item.keterangan}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

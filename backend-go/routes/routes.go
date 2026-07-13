@@ -29,6 +29,7 @@ func SetupRoutes(r *gin.Engine) {
 
 		c.Next()
 	})
+	r.Static("/uploads", "./uploads")
 	rate := limiter.Rate{
 		Period: 1 * time.Minute,
 		Limit:  5,
@@ -95,6 +96,10 @@ func SetupRoutes(r *gin.Engine) {
 		// protected.POST("/acara", limiterMiddleware, controllers.CreateAcara)
 		// protected.GET("/acara/:id", controllers.GetAcaraByID)
 		// protected.PUT("/acara/:id", limiterMiddleware, controllers.UpdateAcara)
+
+		protected.POST("/acara/:id/galeri", limiterMiddleware, controllers.UploadGaleriFoto)
+		protected.DELETE("/acara/:id/galeri/:galeriId", controllers.DeleteGaleriAcara)
+
 
 	}
 }

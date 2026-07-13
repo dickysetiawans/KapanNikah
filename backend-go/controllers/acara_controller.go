@@ -15,8 +15,10 @@ import (
     "net/http"
     "wedding-backend/responses"
     "gorm.io/gorm"
-
-
+	"github.com/google/uuid"
+	"path/filepath"
+	"strconv"
+	"os"
 )
 
 func GetAcara(c *gin.Context) {
@@ -97,6 +99,8 @@ func CreateAcara(c *gin.Context) {
  
 	hasPengantin := !req.Pengantin.IsEmpty()
 	hasOrangTuaPengantin := !req.OrangTuaPengantin.IsEmpty()
+	hasContactPerson := !req.ContactPerson.IsEmpty()
+	hasUcapanTerimakasih := !req.UcapanTerimakasih.IsEmpty()
  
 	// --- Mulai transaksi ---
 	tx := config.DB.Begin()
@@ -169,6 +173,30 @@ func CreateAcara(c *gin.Context) {
 			return
 		}
 	}
+	if hasContactPerson {
+		contactPerson := models.ContactPerson{
+			AcaraId:        acara.ID,
+			Deskripsi:   	req.ContactPerson.DeskripKontak,
+			NoHanphone:    	req.ContactPerson.NoTelpone,
+			
+		}
+		if err := tx.Create(&contactPerson).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data Contact Person"})
+			return
+		}
+	}
+	if hasUcapanTerimakasih {
+		ucapanTerimakasih := models.UcapanTerimakasih{
+			AcaraId:  acara.ID,
+			Ucapan:   req.UcapanTerimakasih.Ucapan,
+		}
+		if err := tx.Create(&ucapanTerimakasih).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data Ucapan"})
+			return
+		}
+	}
 	if len(req.LoveStory) > 0 {
 		loveStories := make([]models.LoveStory, 0, len(req.LoveStory))
 		for _, ls := range req.LoveStory {
@@ -199,6 +227,7 @@ func CreateAcara(c *gin.Context) {
  
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Acara berhasil disimpan",
+		"id":      acara.ID,
 	})
 }
  
@@ -220,7 +249,10 @@ type AcaraDetailResponse struct {
 	models.Acara
 	Pengantin         *models.Pengantin         `json:"pengantin,omitempty"`
 	OrangTuaPengantin *models.OrangTuaPengantin `json:"orang_tua_pengantin,omitempty"`
+	ContactPerson     *models.ContactPerson     `json:"contact_person,omitempty"`
+	UcapanTerimakasih *models.UcapanTerimakasih `json:"ucapan_terimakasih,omitempty"`
 	LoveStory         []models.LoveStory        `json:"love_story,omitempty"`
+	Galeri            []models.GaleriPengantin  `json:"galeri,omitempty"`
 }
 func GetAcaraByID(c *gin.Context) {
 	// ini untuk get id nya
@@ -250,6 +282,20 @@ func GetAcaraByID(c *gin.Context) {
 		response.LoveStory = loveStory
 	}
 
+	var galeri []models.GaleriPengantin
+	if err := config.DB.Where("acara_id = ?", acara.ID).Order("urutan asc").Find(&galeri).Error; err == nil {
+		response.Galeri = galeri
+	}
+
+	var contacPersonFitur models.ContactPerson
+	if err := config.DB.Where("acara_id = ?", acara.ID).First(&contacPersonFitur).Error; err == nil {
+		response.ContactPerson = &contacPersonFitur
+	}
+
+	var ucapanTerimakasihFitur models.UcapanTerimakasih
+	if err := config.DB.Where("acara_id = ?", acara.ID).First(&ucapanTerimakasihFitur).Error; err == nil {
+		response.UcapanTerimakasih = &ucapanTerimakasihFitur
+	}
 	c.JSON(http.StatusOK, response)
 }
 func UpdateAcara(c *gin.Context) {
@@ -323,7 +369,8 @@ func UpdateAcara(c *gin.Context) {
 	}
 	hasPengantin := !req.Pengantin.IsEmpty()
 	hasOrangTuaPengantin := !req.OrangTuaPengantin.IsEmpty()
-
+	hasContactPerson := !req.ContactPerson.IsEmpty()
+	hasUcapanTerimakasih := !req.UcapanTerimakasih.IsEmpty()
  	tx := config.DB.Begin()
 	if tx.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memulai transaksi"})
@@ -393,7 +440,6 @@ func UpdateAcara(c *gin.Context) {
 		}
 		
 	}
- 	// fitur orang tua pengantin
 	if hasOrangTuaPengantin {
 		if req.OrangTuaPengantin.OrangTuaPengantinId == 0 {
 			orangTua := models.OrangTuaPengantin{
@@ -422,6 +468,67 @@ func UpdateAcara(c *gin.Context) {
 			if err := tx.Save(&orangTuaPengantins).Error; err != nil { 
 				tx.Rollback()
 				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data orang tua pengantin"})
+				return
+			}
+		}
+		
+	}
+	if hasContactPerson {
+ 		if req.ContactPerson.ContactPersonId == 0 {
+			// jika data beluma ada, bakal ngebuat baru
+			contactPerson := models.ContactPerson{
+				AcaraId:        existing.ID,
+				Deskripsi:   	req.ContactPerson.DeskripKontak,
+				NoHanphone:    	req.ContactPerson.NoTelpone,
+				
+			}
+			if err := tx.Create(&contactPerson).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data Contact Person"})
+				return
+			}
+		}else{
+			var contactPersons models.ContactPerson
+			if err := config.DB.Where("id = ?", req.ContactPerson.ContactPersonId).First(&contactPersons).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusNotFound, gin.H{"message": "Contact Person tidak ditemukan"})
+				return
+			}
+			contactPersons.AcaraId = existing.ID
+			contactPersons.Deskripsi = req.ContactPerson.DeskripKontak
+			contactPersons.NoHanphone = req.ContactPerson.NoTelpone
+			if err := tx.Save(&contactPersons).Error; err != nil { 
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data Contact Person"})
+				return
+			}
+		}
+		
+	}
+	if  hasUcapanTerimakasih {
+ 		if req.UcapanTerimakasih.UcapanTerimakasihId == 0 {
+			// jika data beluma ada, bakal ngebuat baru
+			ucapanTerimakasih := models.UcapanTerimakasih{
+				AcaraId:        existing.ID,
+				Ucapan:   		req.UcapanTerimakasih.Ucapan,
+			}
+			if err := tx.Create(&ucapanTerimakasih).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data Ucapan Terimakasih"})
+				return
+			}
+		}else{
+			var ucapanTerimakasihs models.UcapanTerimakasih
+			if err := config.DB.Where("id = ?", req.UcapanTerimakasih.UcapanTerimakasihId).First(&ucapanTerimakasihs).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusNotFound, gin.H{"message": "Ucapan terimakasih tidak ditemukan"})
+				return
+			}
+			ucapanTerimakasihs.AcaraId = existing.ID
+			ucapanTerimakasihs.Ucapan = req.UcapanTerimakasih.Ucapan
+			if err := tx.Save(&ucapanTerimakasihs).Error; err != nil { 
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal memperbarui data Ucapan Terimakasih"})
 				return
 			}
 		}
@@ -494,6 +601,7 @@ func UpdateAcara(c *gin.Context) {
 			}
 		}
 	} else {
+		
 		if err := tx.Where("acara_id = ?", existing.ID).Delete(&models.LoveStory{}).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menghapus data love story"})
@@ -507,6 +615,7 @@ func UpdateAcara(c *gin.Context) {
  
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Acara berhasil diperbarui",
+		"id":      existing.ID,
 	})
 }
 func resolveUniqueSlugForUpdate(tx *gorm.DB, baseSlug string, excludeID uint) (string, error) {
@@ -524,4 +633,132 @@ func resolveUniqueSlugForUpdate(tx *gorm.DB, baseSlug string, excludeID uint) (s
 		slug = fmt.Sprintf("%s-%d", baseSlug, i)
 	}
 	return "", fmt.Errorf("gagal generate slug unik setelah 50 percobaan")
+}
+
+
+func UploadGaleriFoto(c *gin.Context) {
+	acaraIdParam := c.Param("id")
+	acaraId, err := strconv.ParseUint(acaraIdParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "ID acara tidak valid"})
+		return
+	}
+
+	var acara models.Acara
+	if err := config.DB.Where("id = ?", acaraId).First(&acara).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Acara tidak ditemukan"})
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Gagal membaca form: " + err.Error()})
+		return
+	}
+
+	files := form.File["foto"]
+	keteranganList := form.Value["keterangan"]
+
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Minimal 1 file foto wajib diunggah"})
+		return
+	}
+
+	const maxFilesPerRequest = 20
+	if len(files) > maxFilesPerRequest {
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Maksimal %d foto per unggahan", maxFilesPerRequest)})
+		return
+	}
+
+	allowedExt := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+	const maxSizePerFile = 5 * 1024 * 1024 // 5MB per file
+
+	
+	for _, fh := range files {
+		ext := strings.ToLower(filepath.Ext(fh.Filename))
+		if !allowedExt[ext] {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Format tidak didukung: " + fh.Filename})
+			return
+		}
+		if fh.Size > maxSizePerFile {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Ukuran file maksimal 5MB: " + fh.Filename})
+			return
+		}
+	}
+
+	uploadDir := filepath.Join("uploads", "galeri", acaraIdParam)
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyiapkan folder penyimpanan"})
+		return
+	}
+
+	var maxUrutan int
+	config.DB.Model(&models.GaleriPengantin{}).
+		Where("acara_id = ?", acaraId).
+		Select("COALESCE(MAX(urutan), 0)").
+		Scan(&maxUrutan)
+
+	var savedFilePaths []string
+	rollbackFiles := func() {
+		for _, p := range savedFilePaths {
+			os.Remove(p)
+		}
+	}
+
+	galeriRecords := make([]models.GaleriPengantin, 0, len(files))
+	for i, fh := range files {
+		ext := strings.ToLower(filepath.Ext(fh.Filename))
+		filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+		fullPath := filepath.Join(uploadDir, filename)
+
+		if err := c.SaveUploadedFile(fh, fullPath); err != nil {
+			rollbackFiles()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan file: " + fh.Filename})
+			return
+		}
+		savedFilePaths = append(savedFilePaths, fullPath)
+
+		keterangan := ""
+		if i < len(keteranganList) {
+			keterangan = keteranganList[i]
+		}
+
+		galeriRecords = append(galeriRecords, models.GaleriPengantin{
+			AcaraId:    uint(acaraId),
+			UrlGambar:  fmt.Sprintf("/uploads/galeri/%s/%s", acaraIdParam, filename),
+			Keterangan: keterangan,
+			Urutan:     maxUrutan + i + 1,
+		})
+	}
+
+	if err := config.DB.Create(&galeriRecords).Error; err != nil {
+		rollbackFiles() 
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan data galeri"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Foto berhasil diunggah",
+	})
+}
+func DeleteGaleriAcara(c *gin.Context) {
+	acaraId := c.Param("id")
+	galeriId := c.Param("galeriId")
+	var galeri models.GaleriPengantin
+	if err := config.DB.Where("id = ? AND acara_id = ?", galeriId, acaraId).First(&galeri).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Foto galeri tidak ditemukan"})
+		return
+	}
+ 
+	if galeri.UrlGambar != "" {
+		filePath := "." + strings.TrimPrefix(galeri.UrlGambar, "") 
+		_ = os.Remove(filePath)
+	}
+ 
+	if err := config.DB.Delete(&galeri).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menghapus foto galeri"})
+		return
+	}
+ 
+	c.JSON(http.StatusOK, gin.H{"message": "Foto galeri berhasil dihapus"})
 }

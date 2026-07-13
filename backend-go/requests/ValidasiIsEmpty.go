@@ -25,3 +25,24 @@ func (o NamaOrangTuaPengantinUpdateRequest) IsEmpty() bool {
 		strings.TrimSpace(o.NamaAyahPengantinWanita) == "" &&
 		strings.TrimSpace(o.NamaIbuPengantinWanita) == ""
 }
+
+func (p ContactPersonRequest) IsEmpty() bool {
+	return strings.TrimSpace(p.DeskripKontak) == "" &&
+		strings.TrimSpace(p.NoTelpone) == ""
+}
+
+func (o UcapanTerimakasihRequest) IsEmpty() bool {
+	return strings.TrimSpace(o.Ucapan) == ""
+	
+}
+
+
+func (p ContactPersonUpdateRequest) IsEmpty() bool {
+	return strings.TrimSpace(p.DeskripKontak) == "" &&
+		strings.TrimSpace(p.NoTelpone) == ""
+}
+
+func (o UcapanTerimakasihUpdateRequest) IsEmpty() bool {
+	return strings.TrimSpace(o.Ucapan) == ""
+	
+}

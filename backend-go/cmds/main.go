@@ -12,7 +12,7 @@ func main() {
 	config.ConnectDB()
 
 	r := gin.Default()
-
+	r.MaxMultipartMemory = 20 << 20 
 	routes.SetupRoutes(r)
 
 	r.Run(":8080")
