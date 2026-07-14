@@ -46,3 +46,13 @@ func (o UcapanTerimakasihUpdateRequest) IsEmpty() bool {
 	return strings.TrimSpace(o.Ucapan) == ""
 	
 }
+
+func (o DresscodeReqeust) IsEmpty() bool {
+	return strings.TrimSpace(o.Deskripsi) == ""
+	
+}
+
+func (o DresscodeUpdateReqeust) IsEmpty() bool {
+	return strings.TrimSpace(o.Deskripsi) == ""
+	
+}

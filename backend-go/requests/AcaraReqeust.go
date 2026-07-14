@@ -13,16 +13,24 @@ type NamaOrangTuaPengantinRequest struct {
     NamaIbuPengantinWanita string `json:"nama_ibu_pengantin_wanita"`
 }
 type LoveStoryRequest struct {
-	Kategori  string `json:"kategori" binding:"required"`
-	Tanggal   string `json:"tanggal" binding:"required"`
-	Deskripsi string `json:"deskripsi" binding:"required"`
+	Kategori  string `json:"kategori"`
+	Tanggal   string `json:"tanggal"`
+	Deskripsi string `json:"deskripsi"`
 }
 type ContactPersonRequest struct {
-	DeskripKontak  string `json:"deskripsi_contact" binding:"required"`
-	NoTelpone   string `json:"no_hanphone" binding:"required"`
+	DeskripKontak  string `json:"deskripsi_contact"`
+	NoTelpone   string `json:"no_hanphone"`
 }
 type UcapanTerimakasihRequest struct {
-	Ucapan  string `json:"ucapan" binding:"required"`
+	Ucapan  string `json:"ucapan"`
+}
+type JadwalAcaraRequest struct {
+	DetailAcara  string `json:"detail_acara"`
+	Mulai   time.Time `json:"waktu_mulai"`
+	Selesai time.Time `json:"waktu_selesai"`
+}
+type DresscodeReqeust struct {
+	Deskripsi string `json:"deskripsi"`
 }
 type CreateAcaraRequest struct {
 	NamaAcara      string    `json:"nama_acara" binding:"required"`
@@ -40,6 +48,8 @@ type CreateAcaraRequest struct {
 	LoveStory         []LoveStoryRequest           `json:"love_story"`
 	ContactPerson ContactPersonRequest  `json:"contact_person"`
 	UcapanTerimakasih UcapanTerimakasihRequest  `json:"ucapan_terimakasih"`
+	JadwalAcara         []JadwalAcaraRequest           `json:"jadwal_acara"`
+	Dresscode DresscodeReqeust `json:"dresscode"`
 }
 
 type NamaPengantinUpdateRequest struct {
@@ -56,18 +66,28 @@ type NamaOrangTuaPengantinUpdateRequest struct {
 }
 type LoveStoryUpdateRequest struct {
 	Id        uint   `json:"id"`
-	Kategori  string `json:"kategori" binding:"required"`
-	Tanggal   string `json:"tanggal" binding:"required"` 
-	Deskripsi string `json:"deskripsi" binding:"required"`
+	Kategori  string `json:"kategori"`
+	Tanggal   string `json:"tanggal"` 
+	Deskripsi string `json:"deskripsi"`
 }
 type ContactPersonUpdateRequest struct {
 	ContactPersonId 	uint   `json:"id"`
-	DeskripKontak  string `json:"deskripsi_contact" binding:"required"`
-	NoTelpone   string `json:"no_hanphone" binding:"required"`
+	DeskripKontak  string `json:"deskripsi_contact"`
+	NoTelpone   string `json:"no_hanphone"`
 }
 type UcapanTerimakasihUpdateRequest struct {
 	UcapanTerimakasihId 	uint   `json:"id"`
-	Ucapan  string `json:"ucapan" binding:"required"`
+	Ucapan  string `json:"ucapan"`
+}
+type JadwalAcaraUpdateRequest struct {
+	Id        uint   `json:"id"`
+	DetailAcara  string `json:"detail_acara"`
+	Mulai   time.Time `json:"waktu_mulai"`
+	Selesai time.Time `json:"waktu_selesai"`
+}
+type DresscodeUpdateReqeust struct {
+	DresscodeId 	uint   `json:"id"`
+	Deskripsi string `json:"deskripsi"`
 }
 type UpdateAcaraRequest struct {
 	NamaAcara      string    `json:"nama_acara" binding:"required"`
@@ -85,6 +105,8 @@ type UpdateAcaraRequest struct {
 	LoveStory         []LoveStoryUpdateRequest           `json:"love_story"`
 	ContactPerson ContactPersonUpdateRequest  `json:"contact_person"`
 	UcapanTerimakasih UcapanTerimakasihUpdateRequest  `json:"ucapan_terimakasih"`
+	JadwalAcara         []JadwalAcaraUpdateRequest           `json:"jadwal_acara"`
+	Dresscode DresscodeUpdateReqeust `json:"dresscode"`
 }
 
 type GaleriFotoRequest struct {

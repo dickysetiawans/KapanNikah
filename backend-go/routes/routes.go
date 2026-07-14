@@ -100,6 +100,7 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/acara/:id/galeri", limiterMiddleware, controllers.UploadGaleriFoto)
 		protected.DELETE("/acara/:id/galeri/:galeriId", controllers.DeleteGaleriAcara)
 
+		protected.POST("/dresscode/:id/detail-img", limiterMiddleware, controllers.UploadDresscodeImg)
 
 	}
 }

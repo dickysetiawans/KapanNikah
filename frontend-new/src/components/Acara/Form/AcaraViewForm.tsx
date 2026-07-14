@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo  } from "react";
 import ComponentCard from "../../common/ComponentCard";
 import Label from "../../form/Label";
 import Input from "../../form/input/InputField";
@@ -54,6 +54,11 @@ interface ContactPersonData {
 }
 interface UcapanTerimakasihData {
   ucapan?: string;
+}
+interface JadwalAcaraData {
+  detail_acara: string;
+  mulai_acara: string;
+  selesai_acara: string;
 }
 function toDatetimeLocal(isoString: string): string {
   if (!isoString) return "";
@@ -146,6 +151,7 @@ export default function AcaraViewForm() {
 
  const [contactPerson, setContactPerson] = useState<ContactPersonData | null>(null);
  const [UcapanTerimakasih, setUcapanTerimakasih] = useState<UcapanTerimakasihData | null>(null);
+ const [jadwalAcara, setJadwalAcara] = useState<JadwalAcaraData[]>([]);
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -188,7 +194,7 @@ export default function AcaraViewForm() {
               }))
             : []
         );
-
+        setJadwalAcara(Array.isArray(acara.jadwal_acara) ? acara.jadwal_acara : []);
         const lat = Number(acara.latitude);
         const lng = Number(acara.longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
@@ -253,7 +259,36 @@ export default function AcaraViewForm() {
     if (!loading) fetchPaketByKegiatan();
   }, [selectedKegiatan, loading]);
 
-
+  const formatTanggal = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }) + " ";
+  };
+  const formatJam = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " ";
+  };
+  function isMultiDayEvent(mulai: string, selesai: string): boolean {
+    if (!mulai || !selesai) return false;
+    const start = new Date(mulai);
+    const end = new Date(selesai);
+    return (
+      start.getFullYear() !== end.getFullYear() ||
+      start.getMonth() !== end.getMonth() ||
+      start.getDate() !== end.getDate()
+    );
+  }
+  const isMultiDay = useMemo(
+    () => isMultiDayEvent(tanggalMulai, tanggalSelesai), // atau isMoreThanOneDay
+    [tanggalMulai, tanggalSelesai]
+  );
   if (loading) return <ComponentCard title="Detail Acara"><p className="p-5 text-center text-sm text-gray-500">Memuat...</p></ComponentCard>;
 
   return (
@@ -454,6 +489,43 @@ export default function AcaraViewForm() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+        {jadwalAcara.length > 0 && (
+          <div>
+            {/* Section header gelap */}
+            <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+             Jadwal Acara
+            </div>
+            <div className="border border-gray-200 rounded-b-lg p-4 space-y-3 overflow-y-auto max-h-[300px]">
+              <table className="w-full border-collapse border border-gray-200 rounded-lg">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="p-3 border-b border-gray-200">No</th>
+                    <th className="p-3 border-b border-gray-200">Waktu</th>
+                    <th className="p-3 border-b border-gray-200">Detail Acara</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {jadwalAcara.map((jadwal, idx) => (
+                    <tr key={idx}>
+                      <td className="p-3" >
+                        {idx + 1}
+                      </td>
+                      <td className="p-3">
+                        {isMultiDay
+                          ? `${formatTanggal(jadwal.mulai_acara)} - ${formatTanggal(jadwal.selesai_acara)}`
+                          : `${formatJam(jadwal.mulai_acara)} - ${formatJam(jadwal.selesai_acara)}`}
+                      </td>
+                      <td className="p-3" >
+                        <p>{jadwal.detail_acara}</p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>           
+              
             </div>
           </div>
         )}

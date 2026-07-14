@@ -48,6 +48,16 @@ interface GaleriItem {
   preview: string;
   keterangan: string;
 }
+interface JadwalAcaraList {
+  id: number;
+  detailAcara: string;
+  mulai: string;
+  selesai: string;
+}
+interface DresscodeImgItem {
+  file: File;
+  preview: string;
+}
 
 function generateSlug(text: string): string {
   return text
@@ -195,7 +205,13 @@ export default function AcaraEditForm() {
   const [ucapanTerimakasihId, setUcapanTerimakasihId] = useState("");
   const [ucapanTerimakasih, setUcapanTerimakasih] = useState("");
   /* stop */
+  
+  const [listJadwalAcara, setListJadwalAcara] = useState<JadwalAcaraList[]>([]);
 
+  /* hanya untuk fitur menampilkan dress code*/
+  const [deskripsiDresscode, setDeskripsiDresscode] = useState("");
+  const [listDresscodeImg, setListDresscodeImg] = useState<DresscodeImgItem[]>([]);
+  /* stop */
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -275,7 +291,17 @@ export default function AcaraEditForm() {
             }))
           );
         }
-
+        if (Array.isArray(acara.jadwal_acara) && acara.jadwal_acara.length > 0) {
+          setListJadwalAcara(acara.jadwal_acara.map((ls: any) => ({
+            id: ls.id || ls.ID || 0,
+            detailAcara: ls.detail_acara || "",
+            mulai: toDatetimeLocal(ls.mulai_acara),
+            selesai: toDatetimeLocal(ls.selesai_acara),
+          })));
+        }
+        if (acara.dresscode) {
+          setDeskripsiDresscode(acara.dresscode.deskripsi)
+        }
         const lat = Number(acara.latitude);
         const lng = Number(acara.longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
@@ -509,7 +535,45 @@ export default function AcaraEditForm() {
       }
       if (fitur.code_fitur === CODE_FITUR.SHOW_THANK_YOU_NOTE) {
         if (!ucapanTerimakasih.trim()) return alert("Ucapan terimakasih wajib diisi");
-       
+      }
+      if (fitur.code_fitur === CODE_FITUR.SHOW_EVENT_SCHEDULE) {
+        // 1. Validasi field wajib + urutan mulai < selesai per item
+        for (const jadwal of listJadwalAcara) {
+          if (!jadwal.detailAcara.trim()) return alert("Detail Acara wajib diisi");
+          if (!jadwal.mulai) return alert("Waktu Mulai Acara wajib diisi");
+          if (!jadwal.selesai) return alert("Waktu Selesai Acara wajib diisi");
+
+          const mulai = new Date(jadwal.mulai);
+          const selesai = new Date(jadwal.selesai);
+
+          if (mulai >= selesai) {
+            return alert(`Waktu selesai "${jadwal.detailAcara}" harus setelah waktu mulainya`);
+          }
+        }
+
+        // 2. Validasi tiap jadwal harus di dalam rentang tanggalMulai - tanggalSelesai acara
+        const batasMulai = new Date(tanggalMulai);
+        const batasSelesai = new Date(tanggalSelesai);
+        for (const jadwal of listJadwalAcara) {
+          const mulai = new Date(jadwal.mulai);
+          const selesai = new Date(jadwal.selesai);
+
+          if (mulai < batasMulai || selesai > batasSelesai) {
+            return alert(`Waktu "${jadwal.detailAcara}" harus berada di dalam rentang waktu keseluruhan acara`);
+          }
+        }
+        const sorted = [...listJadwalAcara].sort(
+          (a, b) => new Date(a.mulai).getTime() - new Date(b.mulai).getTime()
+        );
+        for (let i = 0; i < sorted.length - 1; i++) {
+          const akhirSekarang = new Date(sorted[i].selesai).getTime();
+          const mulaiBerikutnya = new Date(sorted[i + 1].mulai).getTime();
+          if (mulaiBerikutnya < akhirSekarang) {
+            return alert(
+              `Jadwal "${sorted[i].detailAcara}" dan "${sorted[i + 1].detailAcara}" waktunya beririsan`
+            );
+          }
+        }
       }
     }
 
@@ -561,6 +625,13 @@ export default function AcaraEditForm() {
                 deskripsi: s.deskripsi,
               }))
             : [],
+          jadwal_acara: listFitur.some((f) => f.code_fitur === CODE_FITUR.SHOW_EVENT_SCHEDULE)
+            ? listJadwalAcara.map((s) => ({
+                detail_acara: s.detailAcara,
+                waktu_mulai: new Date(s.mulai).toISOString(),
+                waktu_selesai: new Date(s.selesai).toISOString(),
+              }))
+            : [],
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -596,7 +667,38 @@ export default function AcaraEditForm() {
       setSaving(false);
     }
   };
+  const addRowListJadwalAcara = () => {
+    setListJadwalAcara([...listJadwalAcara, { detailAcara: "", mulai: "", selesai: "" }]);
+  };
 
+  const removeRowListJadwalAcara = (index: number) => {
+    const updated = [...listJadwalAcara];
+    updated.splice(index, 1);
+    setListJadwalAcara(updated);
+  };
+
+  const updateRowListJadwalAcara = (index: number, field: keyof LoveStoryList, value: string) => {
+    const updated = [...listJadwalAcara];
+    updated[index] = { ...updated[index], [field]: value };
+    setListJadwalAcara(updated);
+  };
+  const handleDresscodeImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    const newItems: DresscodeImgItem[] = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setListDresscodeImg([...listDresscodeImg, ...newItems]);
+    e.target.value = ""; 
+  };
+
+  const removeDresscodeImg = (index: number) => {
+    const updated = [...listDresscodeImg];
+    URL.revokeObjectURL(updated[index].preview);
+    updated.splice(index, 1);
+    setListDresscodeImg(updated);
+  };
   if (loading) return <ComponentCard title="Edit Acara"><p className="p-5 text-center text-sm text-gray-500">Memuat...</p></ComponentCard>;
 
   return (
@@ -926,6 +1028,135 @@ export default function AcaraEditForm() {
                           onChange={(e) => setUcapanTerimakasih(e.target.value)} 
                           placeholder="Masukan Ucapan terimakasih......."
                         />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {fitur.code_fitur === CODE_FITUR.SHOW_EVENT_SCHEDULE && (
+                  <div>
+                    {/* Section header gelap */}
+                    <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                      Fitur "{fitur.nama_fitur}"
+                    </div>
+                    <div className="border border-gray-200 rounded-b-lg p-4 space-y-4">
+                      <div className="space-y-4 overflow-y-auto max-h-[300px] pr-1">
+                        <table className="w-full border-collapse border border-gray-200 rounded-lg">
+                          <thead>
+                            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              <th className="p-3 border-b border-gray-200">Detail Acara</th>
+                              <th className="p-3 border-b border-gray-200">Mulai</th>
+                              <th className="p-3 border-b border-gray-200">Selesai</th>
+                              <th className="p-3 border-b border-gray-200 w-24 text-center">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {listJadwalAcara.map((jadwal, idx) => (
+                              <tr key={idx}>
+                                <td className="p-3" >
+                                  <Input
+                                    type="text"
+                                    value={jadwal.detailAcara}
+                                    onChange={(e) => updateRowListJadwalAcara(idx, "detailAcara", e.target.value)}
+                                    placeholder="Masukan detail acara"
+                                  />
+                                </td>
+                                <td className="p-3">
+                                  <Input
+                                    type="datetime-local"
+                                    value={jadwal.mulai}
+                                    onChange={(e) => updateRowListJadwalAcara(idx, "mulai", e.target.value)}
+                                    placeholder="Mulai"
+                                  />
+                                </td>
+                                <td className="p-3" >
+                                  <Input
+                                    type="datetime-local"
+                                    value={jadwal.selesai}
+                                    onChange={(e) => updateRowListJadwalAcara(idx, "selesai", e.target.value)}
+                                    placeholder="selesai"
+                                  />
+                                </td>
+                                <td className="p-3 text-center">
+                                  {listJadwalAcara.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeRowListJadwalAcara(idx)}
+                                      className="text-red-600 text-sm hover:underline"
+                                    >
+                                      Hapus
+                                    </button>
+                                  )}
+                                  
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addRowListJadwalAcara}
+                        className="px-3 py-1.5 bg-[#138767] text-white text-sm rounded-lg hover:bg-[#0f6d53] transition"
+                      >
+                        + Tambah
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {fitur.code_fitur === CODE_FITUR.SHOW_DRESS_CODE && (
+                  <div>
+                    <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                      Fitur "{fitur.nama_fitur}"
+                    </div>
+                    <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+                      <div>
+                        <Label htmlFor="deskripsiDresscode">Deskripsi Dresscode</Label>
+                        <textarea
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-600"
+                            rows={3}
+                            value={deskripsiDresscode}
+                            onChange={(e) => setDeskripsiDresscode(e.target.value)} 
+                            placeholder="Masukan Deskripsi Dresscode......."
+                          />
+                      </div>
+                      <div>
+                        <div className="bg-[#138767] text-white px-4 py-3 rounded-t-lg font-semibold tracking-wide uppercase text-sm">
+                          Upload Contoh Dresscode
+                        </div>
+                        <div className="border border-gray-200 rounded-b-lg p-4 space-y-2">
+                           <div>
+                              <Label htmlFor="dresscodeImg">Unggah</Label>
+                              <input
+                                id="dresscodeImg"
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleDresscodeImgChange}
+                                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#138767] file:text-white file:text-sm hover:file:bg-[#0f6d53] file:cursor-pointer cursor-pointer"
+                              />
+                              <p className="mt-1 text-xs text-gray-400">Bisa pilih beberapa foto sekaligus. Format JPG/PNG.</p>
+                           </div>
+                           {listDresscodeImg.length > 0 && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto max-h-[400px] pr-1">
+                                {listDresscodeImg.map((item, idx) => (
+                                  <div key={idx} className="border border-gray-200 rounded-lg p-2 space-y-2 relative">
+                                    <img
+                                      src={item.preview}
+                                      alt={`Preview Dresscode ${idx + 1}`}
+                                      className="w-full h-32 object-cover rounded-md"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeDresscodeImg(idx)}
+                                      className="w-full text-red-600 text-xs hover:underline"
+                                    >
+                                      Hapus Foto
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                        </div>
                       </div>
                     </div>
                   </div>
